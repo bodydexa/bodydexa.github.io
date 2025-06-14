@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Integrated FRAX® Adjustment and NOGG Threshold Calculator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        /* Custom Modal Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            transition: opacity 0.3s ease;
+        }
+        .modal-content {
+            background: white;
+            padding: 2rem;
+            border-radius: 0.75rem;
+            max-width: 90%;
+            width: 500px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            text-align: center;
+            transform: scale(0.95);
+            transition: transform 0.3s ease;
+        }
+        .modal-overlay:not(.hidden) .modal-content {
+            transform: scale(1);
+        }
+        .modal-close-btn {
+            margin-top: 1.5rem;
+            @apply px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition;
+        }
+
+        /* Form & Card Styles */
+        .form-label { @apply block text-sm font-medium text-gray-700 mb-1; }
+        .form-input { @apply block w-full bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 p-2.5 transition; }
+        .form-select { @apply block w-full bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 p-2.5 transition; }
+        .card { @apply bg-white p-6 rounded-xl shadow-md; }
+        .result-card { @apply bg-gray-50 p-6 rounded-xl border border-gray-200; }
+        .btn-primary { @apply w-full text-white bg-green-600 hover:bg-green-700 focus:ring-4 focus:outline-none focus:ring-green-300 font-medium rounded-lg text-lg px-5 py-4 text-center transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105 transform; }
+        .btn-secondary { @apply w-full text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-lg px-5 py-4 text-center transition-all duration-300; }
+
+        /* Chart & D3 Styles */
+        .chart-container { width: 100%; height: auto; }
+        .axis-label, .legend-text { font-size: 0.8rem; fill: #374151; }
+        .chart-title { font-size: 1rem; font-weight: 600; fill: #111827; }
+        
+        .adjusted-point { stroke: #ffffff; stroke-width: 2px; fill: #1d4ed8; }
+        .initial-point { stroke: #60a5fa; stroke-width: 1.5px; fill: #dbeafe; opacity: 0.9; }
+        
+        .point-label-line { stroke: #4b5563; stroke-width: 1px; stroke-dasharray: 2,2; }
+        .point-label-text { font-size: 0.75rem; fill: #374151; font-weight: 500; }
+        .point-label-bg { fill: rgba(255, 255, 255, 0.75); stroke: #e5e7eb; stroke-width: 1px; }
+
+        .d3-area-low-risk { fill: #86efac; }
+        .d3-area-high-risk { fill: #f87171; }
+        .d3-area-very-high-risk { fill: #b91c1c; }
+        
+        .area-low-risk { background-color: #86efac; }
+        .area-high-risk { background-color: #f87171; }
+        .area-very-high-risk { background-color: #b91c1c; }
+
+        .chart-area-label { font-size: 0.9rem; font-weight: 600; text-anchor: middle; pointer-events: none; }
+        
+        /* Result Box Colors */
+        #nogg-result-box.low-risk { background-color: #dcfce7; color: #166534; border-color: #86efac; }
+        #nogg-result-box.high-risk { background-color: #fee2e2; color: #991b1b; border-color: #fca5a5; }
+        #nogg-result-box.very-high-risk { background-color: #fecaca; color: #7f1d1d; border-color: #ef4444; }
+        #nogg-result-box.caution-risk { background-color: #fefce8; color: #854d0e; border-color: #facc15; }
+    </style>
+</head>
+
+<body class="bg-gray-100">
+    <div class="container mx-auto p-4 md:p-8 max-w-7xl">
+        <header class="text-center mb-8">
+            <h1 class="text-3xl md:text-4xl font-bold text-gray-800">Integrated FRAX® & NOGG Calculator</h1>
+            <p class="mt-2 text-md text-gray-600">Enter patient data, calculate the adjusted risk, and view the NOGG treatment recommendation.</p>
+        </header>
+
+        <main class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <!-- Input Column -->
+            <form id="calculator-form" class="space-y-6 self-start">
+                <div class="card">
+                    <h2 class="text-xl font-semibold text-gray-800 border-b pb-3 mb-4">1. Patient & FRAX® Scores</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label for="sex" class="form-label">Sex</label>
+                            <select id="sex" class="form-select">
+                                <option value="female">Female</option>
+                                <option value="male">Male</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="age" class="form-label">Age (40-90)</label>
+                            <input type="number" id="age" class="form-input" placeholder="e.g., 65" required>
+                        </div>
+                        <div>
+                            <label for="initial_mof" class="form-label">Initial MOF Probability (%)</label>
+                            <input type="number" id="initial_mof" class="form-input" step="0.1" placeholder="e.g., 17.0" required>
+                        </div>
+                        <div>
+                            <label for="initial_hf" class="form-label">Initial HF Probability (%)</label>
+                            <input type="number" id="initial_hf" class="form-input" step="0.1" placeholder="e.g., 5.0" required>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h2 class="text-xl font-semibold text-gray-800 border-b pb-3 mb-4">2. Imminent Risk Assessment</h2>
+                    <div>
+                        <label class="form-label">Recent Sentinel Fracture (within 2 years)?</label>
+                        <div class="flex items-center space-x-4 mt-2">
+                            <label><input type="radio" name="recent_fracture_toggle" value="yes" class="mr-1"> Yes</label>
+                            <label><input type="radio" name="recent_fracture_toggle" value="no" class="mr-1" checked> No</label>
+                        </div>
+                    </div>
+                    <div id="recent_fracture_details" class="mt-4 hidden">
+                        <label for="recent_fracture_site" class="form-label">Site of Recent Fracture</label>
+                        <select id="recent_fracture_site" class="form-select">
+                            <option value="vertebra">Vertebra</option>
+                            <option value="hip">Hip</option>
+                            <option value="humerus">Humerus</option>
+                            <option value="forearm">Forearm</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div id="nogg_factors_card" class="card">
+                     <h2 class="text-xl font-semibold text-gray-800 border-b pb-3 mb-4">3. Risk Factors</h2>
+                     <p class="text-sm text-gray-500 mb-4">Note: These are only considered if there is no recent fracture.</p>
+                     <div class="space-y-4">
+                         <div>
+                             <label class="form-label">Current Oral Glucocorticoid (Steroid) Use</label>
+                             <div class="mt-2">
+                                <label class="flex items-center">
+                                    <input type="checkbox" id="gc_dose_option_high" class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded mr-2">
+                                    <span class="text-sm text-gray-700">Patient is taking >7.5mg/day of steroids for ≥3 months</span>
+                                </label>
+                            </div>
+                         </div>
+                          <div>
+                             <label class="form-label">Falls in Last Year</label>
+                              <div class="mt-2 space-y-2">
+                                 <label class="flex items-center"><input type="radio" name="falls_option" value="no" class="mr-2" checked><span class="text-sm text-gray-700">0-1 falls</span></label>
+                                 <label class="flex items-center"><input type="radio" name="falls_option" value="yes" class="mr-2"><span class="text-sm text-gray-700">2 or more falls</span></label>
+                              </div>
+                         </div>
+                         <div>
+                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                 <div>
+                                     <label for="ls_tscore" class="form-label">Lumbar Spine T-score</label>
+                                     <input type="number" id="ls_tscore" class="form-input" step="0.1" placeholder="e.g., -2.8">
+                                 </div>
+                                 <div>
+                                     <label for="fn_tscore" class="form-label">Femoral Neck T-score</label>
+                                     <input type="number" id="fn_tscore" class="form-input" step="0.1" placeholder="e.g., -2.5">
+                                 </div>
+                             </div>
+                             <p class="text-xs text-gray-500 mt-2"><strong>Caveat:</strong> A downward adjustment for a high LS T-score should only be made if the measurement is reliable and not due to artifacts (e.g., degenerative changes).</p>
+                         </div>
+                         <div>
+                            <label for="hal_mm" class="form-label">Hip Axis Length (HAL) in mm</label>
+                            <p class="text-xs text-gray-500 mb-2">Value from DXA scan report. Leave blank if not available.</p>
+                            <input type="number" id="hal_mm" class="form-input" step="0.1" placeholder="e.g., 111.0">
+                        </div>
+                     </div>
+                </div>
+
+                <div class="card p-4">
+                    <div class="grid grid-cols-2 gap-4">
+                        <button id="calculateBtn" type="button" class="w-full text-white bg-green-600 hover:bg-green-700 focus:ring-4 focus:outline-none focus:ring-green-300 font-medium rounded-lg text-lg px-5 py-4 text-center transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105 transform">Calculate & Plot</button>
+                        <button id="resetBtn" type="button" class="w-full text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-lg px-5 py-4 text-center transition-all duration-300">Reset</button>
+                    </div>
+                </div>
+            </form>
+
+            <!-- Result Column -->
+            <div id="results-column" class="space-y-6">
+                 <div id="results_placeholder" class="flex items-center justify-center card bg-gray-50 border-2 border-dashed h-full">
+                    <p class="text-gray-500 text-lg">Your results will be displayed here.</p>
+                </div>
+
+                <div id="all-results-container" class="space-y-6 hidden">
+                    <!-- Uplift Results -->
+                    <div class="result-card">
+                        <h2 class="text-xl font-semibold text-gray-800 border-b pb-3 mb-4">Final Adjusted 10-Year FRAX Risk Percentage</h2>
+                        <div class="grid grid-cols-2 gap-4 text-center mb-6">
+                            <div><h3 class="text-sm font-medium text-gray-500">Initial MOF %</h3><p id="result_initial_mof" class="text-3xl font-bold text-gray-800">-</p></div>
+                            <div><h3 class="text-sm font-medium text-gray-500">Adjusted MOF %</h3><p id="result_adjusted_mof" class="text-3xl font-bold text-red-600">-</p></div>
+                            <div><h3 class="text-sm font-medium text-gray-500">Initial HF %</h3><p id="result_initial_hf" class="text-3xl font-bold text-gray-800">-</p></div>
+                            <div><h3 class="text-sm font-medium text-gray-500">Adjusted HF %</h3><p id="result_adjusted_hf" class="text-3xl font-bold text-red-600">-</p></div>
+                        </div>
+                        <div id="adjustment_reason_container" class="p-4 bg-blue-50 text-blue-800 border-l-4 border-blue-500 rounded-md"><h3 class="font-semibold">Reason for Adjustment:</h3><p id="adjustment_reason" class="text-sm mt-1"></p></div>
+                    </div>
+                    <div class="result-card" id="uplift_breakdown_card"><h2 class="text-xl font-semibold text-gray-800 border-b pb-3 mb-4">Uplift Factor Breakdown</h2>
+                         <p id="uplift_subheading" class="text-sm text-gray-600 -mt-2 mb-3 hidden"></p>
+                        <div id="uplift_breakdown" class="space-y-2 text-sm"></div></div>
+
+                    <!-- NOGG Results -->
+                    <div id="nogg-result-container">
+                        <h2 class="text-xl font-semibold mb-2">Overall NOGG Recommendation</h2>
+                        <div id="nogg-result-box" class="p-4 rounded-lg text-lg font-semibold border-2">
+                            <p id="nogg-result-text"></p>
+                        </div>
+                        <div id="guidance-container" class="mt-4 bg-white p-5 rounded-lg shadow-sm border border-gray-200 text-sm">
+                            <h3 class="text-lg font-semibold mb-3">Interpretation and Guidance</h3>
+                            <div id="guidance-content" class="space-y-3 text-gray-700"></div>
+                             <div class="mt-4 pt-3 border-t border-gray-200 space-y-2 text-xs text-gray-600">
+                                 <p><strong>NB:</strong> These thresholds are for guidance only and the final decision to assess BMD or to initiate therapeutic intervention lies with the individual clinician.</p>
+                                 <p><strong>'Consider'</strong> indicates a conditional recommendation, which applies when the clinician examines the evidence within the wider health and social context and discusses the choices with the patient, taking into account the patient’s values and preferences, or where documentation of the discussion of the pros and cons of an intervention is the indicator of quality, rather than the course of action itself.</p>
+                             </div>
+                        </div>
+                    </div>
+
+                    <div id="nogg-charts-container" class="space-y-6">
+                        <!-- Legend -->
+                        <div class="card p-5">
+                            <h3 class="text-lg font-semibold mb-4">Legend</h3>
+                            <div class="bg-sky-50 p-4 rounded-lg space-y-3">
+                                <div class="flex items-center space-x-4">
+                                    <div class="w-28 text-sm px-3 py-1.5 rounded-md text-white font-semibold text-center area-very-high-risk flex-shrink-0">Very high risk</div>
+                                    <span class="text-sm text-gray-800">Consider Specialist Referral and <span class="underline">Treat</span></span>
+                                </div>
+                                <div class="flex items-center space-x-4">
+                                    <div class="w-28 text-sm px-3 py-1.5 rounded-md text-white font-semibold text-center area-high-risk flex-shrink-0">High risk</div>
+                                    <span class="text-sm text-gray-800 underline">Treat</span>
+                                </div>
+                                <div class="flex items-center space-x-4">
+                                    <div class="w-28 text-sm px-3 py-1.5 rounded-md text-green-900 font-semibold text-center area-low-risk flex-shrink-0">Low Risk</div>
+                                    <span class="text-sm text-gray-800">Give lifestyle advice</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="age-warning" class="hidden p-4 bg-yellow-100 text-yellow-800 border-l-4 border-yellow-500 rounded-md">
+                            <p><strong>Note:</strong> NOGG threshold charts are only validated for patients aged 40 and over.</p>
+                        </div>
+                        <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200 chart-container">
+                            <svg id="major-fracture-chart-svg"></svg>
+                        </div>
+                        <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200 chart-container">
+                            <svg id="hip-fracture-chart-svg"></svg>
+                        </div>
+                    </div>
+                </div>
+                 <div class="text-xs text-gray-500 text-center p-4 border-t space-y-1">
+                    <p><strong>Disclaimer:</strong> This tool is for informational purposes only and is not a substitute for professional clinical judgment.</p>
+                    <p><strong>© 2025 Dr Bob Marley. All rights reserved. Version June 2025 Draft version.</strong></p>
+                 </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Custom Modal -->
+    <div id="custom-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <p id="modal-message" class="text-gray-800 text-lg"></p>
+            <button id="modal-close" class="modal-close-btn">Close</button>
+        </div>
+    </div>
+
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    // --- DOM ELEMENT SELECTORS ---
+    const calculatorForm = document.getElementById('calculator-form');
+    const calculateBtn = document.getElementById('calculateBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    
+    // Modal Elements
+    const modal = document.getElementById('custom-modal');
+    const modalMessage = document.getElementById('modal-message');
+    const modalCloseBtn = document.getElementById('modal-close');
+
+    // Uplift Calculator Elements
+    const recentFractureToggle = document.querySelectorAll('input[name="recent_fracture_toggle"]');
+    const recentFractureDetails = document.getElementById('recent_fracture_details');
+    const noggFactorsCard = document.getElementById('nogg_factors_card');
+    const upliftBreakdownContainer = document.getElementById('uplift_breakdown');
+    const upliftBreakdownCard = document.getElementById('uplift_breakdown_card');
+
+    // Shared / Main Result Containers
+    const resultsPlaceholder = document.getElementById('results_placeholder');
+    const allResultsContainer = document.getElementById('all-results-container');
+    
+    // --- DATA & STATE ---
+    let charts = {};
+
+    const kanisMultipliers={female:{vertebra:{mof:{40:7.14,50:2.64,60:1.84,70:1.5,80:1.23,90:1.01},hf:{40:2.06,50:1.86,60:1.76,70:1.4,80:1.1,90:1}},hip:{mof:{40:6.77,50:2.38,60:1.6,70:1.25,80:0.95,90:0.77},hf:{40:7.83,50:4.98,60:3.2,70:1.84,80:1,90:.75}},humerus:{mof:{40:4.79,50:1.96,60:1.54,70:1.29,80:1.2,90:1.07},hf:{40:.75,50:.83,60:.94,70:1,80:.94,90:.94}},forearm:{mof:{40:3.53,50:1.46,60:1.25,70:1.28,80:1.01,90:.81},hf:{40:1.57,50:1.51,60:1.52,70:1.35,80:1.15,90:1.06}}},male:{vertebra:{mof:{40:4.18,50:1.92,60:1.57,70:1.44,80:1.24,90:.88},hf:{40:2.12,50:1.9,60:1.78,70:1.63,80:1.26,90:.79}},hip:{mof:{40:5.27,50:2.21,60:1.71,70:1.46,80:1.08,90:.68},hf:{40:11.83,50:7.26,60:4.6,70:2.46,80:1.15,90:.62}},humerus:{mof:{40:2.92,50:1.56,60:1.48,70:1.45,80:1.33,90:.88},hf:{40:1.21,50:1.2,60:1.12,70:1.04,80:1.14,90:.77}},forearm:{mof:{40:2.57,50:1.33,60:1.23,70:1.22,80:1.2,90:.73},hf:{40:2.55,50:2.27,60:2.23,70:1.86,80:1.54,90:1.09}}}};
+    const meanHalValues = { male: 121.3, female: 104.7 };
+    const halValidationRanges = { male: {min: 99.1, max: 143.5}, female: {min: 86.1, max: 123.3}};
+    
+    const chartThresholds = {
+        major: {
+            intervention: [[40, 6.0], [45, 6.0], [50, 7.4], [55, 9.5], [60, 12.6], [65, 16.9], [70, 20.4], [75, 20.5], [80, 20.5], [85, 20.5], [90, 20.5]],
+            vhrt: [[40, 9.7], [45, 9.7], [50, 11.8], [55, 15.4], [60, 19.8], [65, 27.0], [70, 32.7], [75, 32.7], [80, 32.7], [85, 32.7], [90, 32.8]]
+        },
+        hip: {
+            intervention: [[40, 2.8], [45, 2.4], [50, 3.0], [55, 4.7], [60, 7.7], [62, 10.0], [65, 11.8], [67, 15.2], [70, 18.1], [75, 18.1], [80, 18.1], [85, 18.1], [90, 18.1]],
+            vhrt: [[40, 4.5], [45, 3.9], [50, 4.8], [55, 7.8], [60, 12.3], [65, 19.2], [70, 29.0], [75, 29.1], [80, 29.1], [85, 29.1], [90, 29.0]]
+        }
+    };
+    
+    const guidanceText = {
+        low: `<p class="font-semibold text-green-800">Low Risk</p><p>Where both the MOF and Hip fracture probabilities fall below the treatment threshold, lifestyle advice should be given and a further assessment is recommended in 5 years or less depending on the clinical context (e.g. new clinical risk factors develop, or a fragility fracture occurs).</p>`,
+        high: `<p class="font-semibold text-red-800">High Risk</p><p>In individuals with probabilities of a major osteoporotic fracture and/or hip fracture AT or ABOVE either intervention threshold, treatment to reduce fracture risk should be offered.</p>`,
+        veryHigh: `<p class="font-semibold text-red-900">Very High Risk</p><p>Consider referral to osteoporosis specialist for assessment and consideration of parenteral treatment. If a delay is anticipated, start oral treatment in meantime. If not for referral, treat as for high risk.</p>`,
+        under50Caution: `<p class="font-semibold text-yellow-800">Interpret with Caution (Age < 50)</p><p>NOGG threshold treatment guidlines are recommended to be used in those 50 or over. Please interpret with caution under this age and consider investigation for secondary causes if results falls above the low risk threshold criteria.</p>`
+    };
+
+    // --- MODAL FUNCTIONS ---
+    function showModal(message) {
+        modalMessage.textContent = message;
+        modal.classList.remove('hidden');
+    }
+    function closeModal() {
+        modal.classList.add('hidden');
+    }
+
+    // --- EVENT LISTENERS ---
+    modalCloseBtn.addEventListener('click', closeModal);
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) closeModal();
+    });
+
+    recentFractureToggle.forEach(radio => radio.addEventListener('change', e => {
+        const isDisabled = e.target.value === 'yes';
+        recentFractureDetails.classList.toggle('hidden', !isDisabled);
+        noggFactorsCard.classList.toggle('opacity-50', isDisabled);
+        noggFactorsCard.classList.toggle('pointer-events-none', isDisabled);
+    }));
+
+    calculateBtn.addEventListener('click', runFullCalculation);
+    
+    resetBtn.addEventListener('click', () => {
+        calculatorForm.reset();
+        resultsPlaceholder.classList.remove('hidden');
+        allResultsContainer.classList.add('hidden');
+        recentFractureDetails.classList.add('hidden');
+        noggFactorsCard.classList.remove('opacity-50', 'pointer-events-none');
+        clearNoggCharts();
+    });
+    
+    // --- MAIN CALCULATION LOGIC ---
+    function runFullCalculation() {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+
+        const sex = document.getElementById('sex').value;
+        const age = parseInt(document.getElementById('age').value);
+        const initial_mof = parseFloat(document.getElementById('initial_mof').value);
+        const initial_hf = parseFloat(document.getElementById('initial_hf').value);
+        const has_recent_fracture = document.querySelector('input[name="recent_fracture_toggle"]:checked').value === 'yes';
+        const recent_fracture_site = document.getElementById('recent_fracture_site').value;
+        const is_gc_high_dose = document.getElementById('gc_dose_option_high').checked;
+        const has_recurrent_falls = document.querySelector('input[name="falls_option"]:checked').value === 'yes';
+        const ls_tscore = parseFloat(document.getElementById('ls_tscore').value);
+        const fn_tscore = parseFloat(document.getElementById('fn_tscore').value);
+        const hal_mm = parseFloat(document.getElementById('hal_mm').value);
+
+        if (isNaN(age) || isNaN(initial_mof) || isNaN(initial_hf)) { showModal("Please fill in Age, Initial MOF, and Initial HF fields."); return; }
+        if (age < 40 || age > 90) { showModal("Please enter an age between 40 and 90."); return; }
+        if (initial_mof < 0 || initial_mof > 100 || initial_hf < 0 || initial_hf > 100) { showModal("Initial probabilities must be between 0 and 100."); return; }
+        if (!isNaN(hal_mm)) {
+            const range = halValidationRanges[sex];
+            if (hal_mm < range.min || hal_mm > range.max) { showModal(`Hip Axis Length for a ${sex} must be between ${range.min} and ${range.max} mm.`); return; }
+        }
+        
+        let adjustment_reason="", mof_multiplier=1, hf_multiplier=1, potential_uplifts=[];
+
+        if(has_recent_fracture){
+            upliftBreakdownCard.classList.add('hidden');
+            const age_map_mof = kanisMultipliers[sex][recent_fracture_site].mof;
+            const age_map_hf = kanisMultipliers[sex][recent_fracture_site].hf;
+            mof_multiplier = getMultiplierForAge(age_map_mof, age);
+            hf_multiplier = getMultiplierForAge(age_map_hf, age);
+            adjustment_reason = `Imminent Risk: Applied recent fracture multiplier for a ${recent_fracture_site}. MOF x${mof_multiplier.toFixed(2)}, HF x${hf_multiplier.toFixed(2)}.`;
+        } else {
+            upliftBreakdownCard.classList.remove('hidden');
+            if (is_gc_high_dose) potential_uplifts.push({reason: 'High-dose glucocorticoids (>7.5mg/day)', mof: 1.15, hf: 1.20});
+            if (!isNaN(ls_tscore) && !isNaN(fn_tscore)) {
+                const t_score_diff = Math.round(ls_tscore) - Math.round(fn_tscore);
+                if (t_score_diff !== 0) {
+                    const bmd_multiplier = 1.0 - (t_score_diff * 0.10);
+                    potential_uplifts.push({reason: `Discordant BMD (T-score diff: ${t_score_diff})`, mof: bmd_multiplier, hf: 1});
+                }
+            }
+            if (has_recurrent_falls) potential_uplifts.push({reason: 'Recurrent falls (≥2)', mof: 1.3, hf: 1.3});
+            if (!isNaN(hal_mm)) {
+                const diff_mm = hal_mm - meanHalValues[sex];
+                let hal_adj_percent = (diff_mm > 0) ? (diff_mm * 4.7) : (diff_mm * 3.8);
+                potential_uplifts.push({reason: `Hip Axis Length (${diff_mm.toFixed(1)}mm from mean)`, mof: 1, hf: 1 + hal_adj_percent / 100});
+            }
+
+            if (potential_uplifts.length > 0) {
+                mof_multiplier = Math.max(...potential_uplifts.map(u => u.mof), 1);
+                hf_multiplier = Math.max(...potential_uplifts.map(u => u.hf), 1);
+                adjustment_reason = "Risk Factor Adjustment: Applied the largest single uplift from the factors below.";
+            } else {
+                adjustment_reason = "No additional risk factors for adjustment were present.";
+            }
+        }
+        
+        const adjusted_mof = initial_mof * mof_multiplier;
+        const adjusted_hf = initial_hf * hf_multiplier;
+        
+        allResultsContainer.dataset.mofMultiplier = mof_multiplier;
+        allResultsContainer.dataset.hfMultiplier = hf_multiplier;
+        
+        displayUpliftResults({initial_mof, initial_hf, adjusted_mof, adjusted_hf, adjustment_reason, potential_uplifts, dominant_mof_multiplier: mof_multiplier, dominant_hf_multiplier: hf_multiplier});
+        
+        setTimeout(() => {
+            initializeCharts();
+            document.getElementById('age-warning').classList.toggle('hidden', age >= 40);
+            document.getElementById('nogg-charts-container').classList.toggle('hidden', age < 40);
+            document.getElementById('nogg-result-container').classList.toggle('hidden', age < 40);
+
+            if (age >= 40) {
+                plotPointsAndRecommend(age, adjusted_mof, adjusted_hf, initial_mof, initial_hf);
+            } else {
+                clearNoggCharts();
+            }
+        }, 0);
+    }
+
+    // --- FRAX UPLIFT HELPER FUNCTIONS ---
+    function getMultiplierForAge(age_map, age) {
+        const ageKeys = Object.keys(age_map).map(Number);
+        if (age <= ageKeys[0]) return age_map[ageKeys[0]];
+        if (age >= ageKeys[ageKeys.length - 1]) return age_map[ageKeys.length - 1];
+        const closestAge = ageKeys.reduce((p, c) => Math.abs(c - age) < Math.abs(p - age) ? c : p);
+        return age_map[closestAge];
+    }
+    
+    function displayUpliftResults(data) {
+        document.getElementById('result_initial_mof').textContent = `${data.initial_mof.toFixed(1)}%`;
+        document.getElementById('result_initial_hf').textContent = `${data.initial_hf.toFixed(1)}%`;
+        document.getElementById('result_adjusted_mof').textContent = `${data.adjusted_mof.toFixed(1)}%`;
+        document.getElementById('result_adjusted_hf').textContent = `${data.adjusted_hf.toFixed(1)}%`;
+
+        const adjReasonContainer = document.getElementById('adjustment_reason_container');
+        const adjReasonText = document.getElementById('adjustment_reason');
+        const upliftSubheading = document.getElementById('uplift_subheading');
+
+        adjReasonContainer.classList.add('hidden');
+        upliftSubheading.classList.add('hidden');
+
+        if (data.adjustment_reason === "Risk Factor Adjustment: Applied the largest single uplift from the factors below.") {
+            upliftSubheading.textContent = "(Single largest uplift applied from the factors below)";
+            upliftSubheading.classList.remove('hidden');
+        } else {
+            adjReasonText.textContent = data.adjustment_reason;
+            adjReasonContainer.classList.remove('hidden');
+        }
+        
+        upliftBreakdownContainer.innerHTML = '';
+        if (data.potential_uplifts.length > 0) {
+            const header = `<div class="grid grid-cols-3 font-semibold text-gray-600 border-b pb-1"><div>Factor</div><div class="text-center">MOF Multiplier</div><div class="text-center">HF Multiplier</div></div>`;
+            upliftBreakdownContainer.insertAdjacentHTML('beforeend', header);
+            data.potential_uplifts.forEach(uplift => {
+                const isDominantMOF = uplift.mof.toFixed(4) === data.dominant_mof_multiplier.toFixed(4) && uplift.mof !== 1;
+                const isDominantHF = uplift.hf.toFixed(4) === data.dominant_hf_multiplier.toFixed(4) && uplift.hf !== 1;
+                const mofClass = isDominantMOF ? 'font-bold text-blue-600' : '';
+                const hfClass = isDominantHF ? 'font-bold text-blue-600' : '';
+                const row = `<div class="grid grid-cols-3 items-center border-b border-gray-200 py-2 last:border-b-0"><div>${uplift.reason}</div><div class="text-center ${mofClass}">x${uplift.mof.toFixed(2)} ${isDominantMOF?'<span class="text-xs text-blue-500">(Applied)</span>':''}</div><div class="text-center ${hfClass}">x${uplift.hf.toFixed(2)} ${isDominantHF?'<span class="text-xs text-blue-500">(Applied)</span>':''}</div></div>`;
+                upliftBreakdownContainer.insertAdjacentHTML('beforeend', row);
+            });
+        } else if (!upliftBreakdownCard.classList.contains('hidden')) {
+            upliftBreakdownContainer.innerHTML = '<p class="text-gray-500">No risk factors for adjustment were applicable.</p>';
+        }
+
+        resultsPlaceholder.classList.add('hidden');
+        allResultsContainer.classList.remove('hidden');
+    }
+    
+    // --- NOGG CHART HELPER FUNCTIONS ---
+    function createChart(selector, data, title, yDomain, ageDomain) {
+        const svg = d3.select(selector);
+        svg.selectAll("*").remove();
+
+        const parent = svg.node().parentNode;
+        if (!parent || parent.clientWidth === 0) return null;
+        const margin = { top: 40, right: 20, bottom: 40, left: 50 };
+        const width = parent.clientWidth - margin.left - margin.right;
+        const height = parent.clientWidth * 0.65 - margin.top - margin.bottom;
+        
+        svg.attr("viewBox", `0 0 ${width + margin.left + margin.right} ${height + margin.top + margin.bottom}`);
+        
+        const g = svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
+        const xScale = d3.scaleLinear().domain(ageDomain).range([0, width]).clamp(true);
+        const yScale = d3.scaleLinear().domain(yDomain).range([height, 0]).clamp(true);
+        
+        const interventionInterpolator = d3.scaleLinear().domain(data.intervention.map(p => p[0])).range(data.intervention.map(p => p[1]));
+        const vhrtInterpolator = d3.scaleLinear().domain(data.vhrt.map(p => p[0])).range(data.vhrt.map(p => p[1]));
+        const points = d3.range(ageDomain[0], ageDomain[1] + 0.5, 0.5);
+        
+        const lowRiskArea = d3.area().x(d => xScale(d)).y0(height).y1(d => yScale(interventionInterpolator(d))).curve(d3.curveLinear);
+        const highRiskArea = d3.area().x(d => xScale(d)).y0(d => yScale(interventionInterpolator(d))).y1(d => yScale(vhrtInterpolator(d))).curve(d3.curveLinear);
+        const vhrtArea = d3.area().x(d => xScale(d)).y0(d => yScale(vhrtInterpolator(d))).y1(0).curve(d3.curveLinear);
+        
+        g.append("path").datum(points).attr("class", "d3-area-low-risk").attr("d", lowRiskArea);
+        g.append("path").datum(points).attr("class", "d3-area-high-risk").attr("d", highRiskArea);
+        g.append("path").datum(points).attr("class", "d3-area-very-high-risk").attr("d", vhrtArea);
+
+        if (yDomain[1] === 40) {
+            g.append("text").attr("class", "chart-area-label").style("fill", "#166534").attr("x", xScale(75)).attr("y", yScale(10)).text("Give Lifestyle advice");
+            g.append("text").attr("class", "chart-area-label").style("fill", "white").attr("x", xScale(75)).attr("y", yScale(26)).text("Treat");
+            g.append("text").attr("class", "chart-area-label").style("fill", "white").attr("x", xScale(75)).attr("y", yScale(36)).text("Consider Specialist Referral & Treat");
+        } else {
+            g.append("text").attr("class", "chart-area-label").style("fill", "#166534").attr("x", xScale(75)).attr("y", yScale(6)).text("Give Lifestyle advice");
+            g.append("text").attr("class", "chart-area-label").style("fill", "white").attr("x", xScale(75)).attr("y", yScale(24)).text("Treat");
+            g.append("text").attr("class", "chart-area-label").style("fill", "white").attr("x", xScale(75)).attr("y", yScale(32)).text("Consider Specialist Referral & Treat");
+        }
+
+        const xAxis = d3.axisBottom(xScale).ticks(10).tickFormat(d => d);
+        const yAxis = d3.axisLeft(yScale).ticks(yDomain[1] / 5);
+        g.append("g").attr("transform", `translate(0, ${height})`).call(xAxis);
+        g.append("g").call(yAxis);
+        
+        svg.append("text").attr("class", "axis-label").attr("text-anchor", "middle").attr("x", margin.left + width / 2).attr("y", height + margin.top + 35).text("Age (years)");
+        svg.append("text").attr("class", "chart-title").attr("text-anchor", "middle").attr("x", margin.left + width / 2).attr("y", 25).text(title);
+        
+        return { svg, g, xScale, yScale };
+    }
+
+    function clearNoggCharts() {
+        d3.selectAll('.plot-elements').remove();
+    }
+
+    function drawLabelledPoint(chart, {x, y, label, type}) {
+        if (!chart || !chart.g || isNaN(x) || isNaN(y)) return;
+        
+        const pointX = chart.xScale(x);
+        const pointY = chart.yScale(y);
+        const isAdjusted = type === 'adjusted';
+
+        const labelGroup = chart.g.append("g").attr("class", "plot-elements");
+
+        const xOffset = isAdjusted ? 25 : -25;
+        const yOffset = isAdjusted ? -25 : 25;
+        const textAnchor = isAdjusted ? "start" : "end";
+        
+        labelGroup.append("line")
+            .attr("class", "point-label-line")
+            .attr("x1", pointX)
+            .attr("y1", pointY)
+            .attr("x2", pointX + xOffset)
+            .attr("y2", pointY + yOffset);
+        
+        const labelText = isAdjusted ? label + '\u00A0' : '\u00A0' + label;
+
+        const textEl = labelGroup.append("text")
+            .attr("class", "point-label-text")
+            .attr("x", pointX + xOffset + (isAdjusted ? 5 : -5))
+            .attr("y", pointY + yOffset)
+            .attr("dy", "0.32em")
+            .attr("text-anchor", textAnchor)
+            .text(labelText);
+
+        const bbox = textEl.node().getBBox();
+        labelGroup.insert("rect", "text")
+            .attr("class", "point-label-bg")
+            .attr("x", bbox.x - 4)
+            .attr("y", bbox.y - 2)
+            .attr("width", bbox.width + 8)
+            .attr("height", bbox.height + 4)
+            .attr("rx", 4)
+            .attr("ry", 4);
+
+        labelGroup.append("circle")
+            .attr("class", `${type}-point`)
+            .attr("cx", pointX)
+            .attr("cy", pointY)
+            .attr("r", isAdjusted ? 7 : 5);
+    }
+
+    function plotPointsAndRecommend(age, adjustedMajor, adjustedHip, initialMajor, initialHip) {
+        clearNoggCharts(); 
+        if (isNaN(age)) return;
+
+        const ageDomain = [40, 90];
+        if (age < ageDomain[0] || age > ageDomain[1]) { clearNoggCharts(); return; }
+
+        const noAdjustment = Math.abs(initialMajor - adjustedMajor) < 0.01 && Math.abs(initialHip - adjustedHip) < 0.01;
+
+        if (noAdjustment) {
+            if(charts.major && charts.major.g) {
+                charts.major.g.append("g").attr("class", "plot-elements").append("circle").attr("class", "adjusted-point").attr("cx", charts.major.xScale(age)).attr("cy", charts.major.yScale(adjustedMajor)).attr("r", 7);
+            }
+            if(charts.hip && charts.hip.g) {
+                charts.hip.g.append("g").attr("class", "plot-elements").append("circle").attr("class", "adjusted-point").attr("cx", charts.hip.xScale(age)).attr("cy", charts.hip.yScale(adjustedHip)).attr("r", 7);
+            }
+        } else {
+            drawLabelledPoint(charts.major, { x: age, y: initialMajor, label: 'Initial', type: 'initial' });
+            drawLabelledPoint(charts.major, { x: age, y: adjustedMajor, label: 'Adjusted', type: 'adjusted' });
+            
+            drawLabelledPoint(charts.hip, { x: age, y: initialHip, label: 'Initial', type: 'initial' });
+            drawLabelledPoint(charts.hip, { x: age, y: adjustedHip, label: 'Adjusted', type: 'adjusted' });
+        }
+
+        function getRiskLevel(age, probability, thresholdData) {
+            const interpolator = (data) => d3.scaleLinear().domain(data.map(d => d[0])).range(data.map(d => d[1]));
+            const clampedAge = Math.max(thresholdData.intervention[0][0], Math.min(age, thresholdData.intervention[thresholdData.intervention.length-1][0]));
+            const interventionThreshold = interpolator(thresholdData.intervention)(clampedAge);
+            const vhrtThreshold = interpolator(thresholdData.vhrt)(clampedAge);
+            if (probability >= vhrtThreshold) return { level: 2, recommendation: "Consider Specialist Referral and Treat" };
+            if (probability >= interventionThreshold) return { level: 1, recommendation: "Treat" };
+            return { level: 0, recommendation: "Give Lifestyle Advice" };
+        }
+
+        const majorRisk = getRiskLevel(age, adjustedMajor, chartThresholds.major);
+        const hipRisk = getRiskLevel(age, adjustedHip, chartThresholds.hip);
+        const overallFinalRisk = majorRisk.level > hipRisk.level ? majorRisk : hipRisk;
+
+        const noggResultContainer = document.getElementById('nogg-result-container');
+        const resultBox = document.getElementById('nogg-result-box');
+        const resultText = document.getElementById('nogg-result-text');
+        const guidanceContent = document.getElementById('guidance-content');
+        
+        resultBox.className = "p-4 rounded-lg text-lg font-semibold border-2"; 
+
+        if (age < 50 && overallFinalRisk.level > 0) {
+            resultText.textContent = "Interpret with Caution";
+            resultBox.classList.add('caution-risk');
+            guidanceContent.innerHTML = guidanceText.under50Caution;
+        } else {
+            resultText.textContent = overallFinalRisk.recommendation;
+            if (overallFinalRisk.level === 0) { resultBox.classList.add('low-risk'); guidanceContent.innerHTML = guidanceText.low; } 
+            else if (overallFinalRisk.level === 1) { resultBox.classList.add('high-risk'); guidanceContent.innerHTML = guidanceText.high; } 
+            else if (overallFinalRisk.level === 2) { resultBox.classList.add('very-high-risk'); guidanceContent.innerHTML = guidanceText.veryHigh; }
+        }
+        noggResultContainer.classList.remove('hidden');
+    }
+
+    // --- INITIALIZATION & RESIZE ---
+    function initializeCharts() {
+        const ageDomain = [40, 90];
+        charts.major = createChart('#major-fracture-chart-svg', chartThresholds.major, '(%) 10-year probability of Major Osteoporotic Fracture', [0, 40], ageDomain);
+        charts.hip = createChart('#hip-fracture-chart-svg', chartThresholds.hip, '(%) 10-year probability of Hip Fracture', [0, 35], ageDomain);
+    }
+    
+    window.addEventListener('resize', () => {
+        if (allResultsContainer.classList.contains('hidden')) return;
+        setTimeout(() => {
+            const age = parseInt(document.getElementById('age').value);
+            const adjusted_mof = parseFloat(document.getElementById('result_adjusted_mof').textContent);
+            const adjusted_hf = parseFloat(document.getElementById('result_adjusted_hf').textContent);
+            const initial_mof = parseFloat(document.getElementById('result_initial_mof').textContent);
+            const initial_hf = parseFloat(document.getElementById('result_initial_hf').textContent);
+            
+            initializeCharts();
+
+            if (age >= 40 && !isNaN(adjusted_mof) && !isNaN(adjusted_hf)) {
+                plotPointsAndRecommend(age, adjusted_mof, adjusted_hf, initial_mof, initial_hf);
+            }
+        }, 100);
+    });
+});
+</script>
+
+</body>
+</html>
