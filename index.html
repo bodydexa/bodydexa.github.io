@@ -282,7 +282,7 @@
                 </div>
                  <div class="text-xs text-gray-500 text-center p-4 border-t space-y-1">
                      <p><strong>Disclaimer:</strong> This tool is for informational purposes only and is not a substitute for professional clinical judgment.</p>
-                     <p><strong>© 2025 Dr Imran Khan. All rights reserved. Version June 15th 2025 [Draft version].</strong></p>
+                     <p><strong>© 2025 Dr Imran Khan All rights reserved. Version 15th June 2025 [Draft version] </strong></p>
                  </div>
             </div>
         </main>
@@ -368,10 +368,11 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     };
     
+    // UPDATED: Hyperlinks added to guidance text
     const guidanceText = {
-        low: `<p class="font-semibold text-green-800">Low Risk</p><p>Where both the MOF and Hip fracture probabilities fall below the treatment threshold, lifestyle advice should be given and a further assessment is recommended in 5 years or less depending on the clinical context (e.g. new clinical risk factors develop, or a fragility fracture occurs).</p>`,
-        high: `<p class="font-semibold text-red-800">High Risk</p><p>In individuals with probabilities of a major osteoporotic fracture and/or hip fracture AT or ABOVE either intervention threshold, treatment to reduce fracture risk should be offered.</p>`,
-        veryHigh: `<p class="font-semibold text-red-900">Very High Risk</p><p>Consider referral to osteoporosis specialist for assessment and consideration of parenteral treatment. If a delay is anticipated, start oral treatment in meantime. If not for referral, treat as for high risk.</p>`,
+        low: `<p class="font-semibold text-green-800">Low Risk</p><p>Where both the MOF and Hip fracture probabilities fall below the treatment threshold, <a href="https://www.nogg.org.uk/full-guideline/section-5-non-pharmacological-management-osteoporosis" target="_blank" class="text-blue-600 underline hover:text-blue-800">lifestyle advice</a> should be given and a further assessment is recommended in 5 years or less depending on the clinical context (e.g. new clinical risk factors develop, or a fragility fracture occurs).</p>`,
+        high: `<p class="font-semibold text-red-800">High Risk</p><p>In individuals with probabilities of a major osteoporotic fracture and/or hip fracture AT or ABOVE either intervention threshold, <a href="https://www.nogg.org.uk/full-guideline/section-6-pharmacological-treatment-options" target="_blank" class="text-blue-600 underline hover:text-blue-800">treatment to reduce fracture risk</a> should be offered.</p>`,
+        veryHigh: `<p class="font-semibold text-red-900">Very High Risk</p><p>Consider referral to osteoporosis specialist <a href="https://www.nogg.org.uk/full-guideline/section-6-pharmacological-treatment-options#drug" target="_blank" class="text-blue-600 underline hover:text-blue-800">for assessment and consideration of parenteral treatment</a>. If a delay is anticipated, start oral treatment in meantime. If not for referral, treat as for high risk.</p>`,
         under50Caution: `<p class="font-semibold text-yellow-800">Interpret with Caution (Age < 50)</p><p>NOGG threshold treatment guidlines are recommended to be used in those 50 or over. Please interpret with caution under this age and consider investigation for secondary causes if results falls above the low risk threshold criteria.</p>`
     };
 
