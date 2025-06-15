@@ -170,11 +170,11 @@
                          <div>
                              <label class="form-label">Current Oral Glucocorticoid (Steroid) Use</label>
                              <div class="mt-2">
-                                <label class="flex items-center">
-                                    <input type="checkbox" id="gc_dose_option_high" class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded mr-2">
-                                    <span class="text-sm text-gray-700">Patient is taking >7.5mg/day of steroids for ≥3 months</span>
-                                </label>
-                            </div>
+                                 <label class="flex items-center">
+                                     <input type="checkbox" id="gc_dose_option_high" class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded mr-2">
+                                     <span class="text-sm text-gray-700">Patient is taking >7.5mg/day of steroids for ≥3 months</span>
+                                 </label>
+                             </div>
                          </div>
                           <div>
                              <label class="form-label">Falls in Last Year</label>
@@ -200,7 +200,7 @@
                             <label for="hal_mm" class="form-label">Hip Axis Length (HAL) in mm</label>
                             <p class="text-xs text-gray-500 mb-2">Value from DXA scan report. Leave blank if not available.</p>
                             <input type="number" id="hal_mm" class="form-input" step="0.1" placeholder="e.g., 111.0">
-                        </div>
+                         </div>
                      </div>
                 </div>
 
@@ -282,8 +282,8 @@
                     </div>
                 </div>
                  <div class="text-xs text-gray-500 text-center p-4 border-t space-y-1">
-                    <p><strong>Disclaimer:</strong> This tool is for informational purposes only and is not a substitute for professional clinical judgment.</p>
-                    <p><strong>© 2025 Dr Bob Marley. All rights reserved. Version June 2025 Draft version.</strong></p>
+                     <p><strong>Disclaimer:</strong> This tool is for informational purposes only and is not a substitute for professional clinical judgment.</p>
+                     <p><strong>© 2025 Dr Imran Khan. All rights reserved. Version June 2025 Draft version.</strong></p>
                  </div>
             </div>
         </main>
@@ -339,15 +339,18 @@ document.addEventListener('DOMContentLoaded', function () {
     const meanHalValues = { male: 121.3, female: 104.7 };
     const halValidationRanges = { male: {min: 99.1, max: 143.5}, female: {min: 86.1, max: 123.3}};
     
+    // --- NOGG CHART THRESHOLD DATA ---
     const chartThresholds = {
         major: {
             intervention: [[40, 6.0], [45, 6.0], [50, 7.4], [55, 9.5], [60, 12.6], [65, 16.9], [70, 20.4], [75, 20.5], [80, 20.5], [85, 20.5], [90, 20.5]],
             vhrt: [[40, 9.7], [45, 9.7], [50, 11.8], [55, 15.4], [60, 19.8], [65, 27.0], [70, 32.7], [75, 32.7], [80, 32.7], [85, 32.7], [90, 32.8]]
         },
         hip: {
-            intervention: [[40, 0.96], [45, 0.82], [50, 1.02], [55, 1.6], [60, 2.6], [62, 3.4], [65, 4], [67, 5.2], [70, 18.1], [75, 18.1], [80, 6.2], [85, 6.2], [90, 6.2]],
-
-            vhrt: [[40, 1.543], [45, 1.338], [50, 1.646], [55, 2.675], [60, 4.219], [65, 6.586], [70, 9.944], [75, 9.979], [80, 9.979], [85, 9.979], [90, 9.944]]           
+            // UPDATED DATA: Replaced with data from the latest uploaded image.
+            // The "upper threshold" from the image is the 'intervention' line (lower line).
+            // The "lower threshold" from the image is the 'vhrt' line (upper line).
+            intervention: [[40, 0.82], [45, 0.70], [50, 0.89], [55, 1.40], [60, 2.27], [62, 2.96], [65, 3.52], [67, 4.57], [70, 5.41], [75, 5.41], [80, 5.41], [85, 5.41], [90, 5.43]],
+            vhrt: [[40, 1.33], [45, 1.15], [50, 1.43], [55, 2.30], [60, 3.65], [65, 5.72], [70, 8.71], [75, 8.71], [80, 8.72], [85, 8.71], [90, 8.72]]
         }
     };
     
@@ -585,18 +588,19 @@ document.addEventListener('DOMContentLoaded', function () {
         g.append("path").datum(points).attr("class", "d3-area-high-risk").attr("d", highRiskArea);
         g.append("path").datum(points).attr("class", "d3-area-very-high-risk").attr("d", vhrtArea);
 
-        if (yDomain[1] === 40) {
+        // Adjust text label Y positions based on Y-domain
+        if (yDomain[1] === 40) { // Major Fracture Chart
             g.append("text").attr("class", "chart-area-label").style("fill", "#166534").attr("x", xScale(75)).attr("y", yScale(10)).text("Give Lifestyle advice");
             g.append("text").attr("class", "chart-area-label").style("fill", "white").attr("x", xScale(75)).attr("y", yScale(26)).text("Treat");
             g.append("text").attr("class", "chart-area-label").style("fill", "white").attr("x", xScale(75)).attr("y", yScale(36)).text("Consider Specialist Referral & Treat");
-        } else {
-            g.append("text").attr("class", "chart-area-label").style("fill", "#166534").attr("x", xScale(75)).attr("y", yScale(6)).text("Give Lifestyle advice");
-            g.append("text").attr("class", "chart-area-label").style("fill", "white").attr("x", xScale(75)).attr("y", yScale(24)).text("Treat");
-            g.append("text").attr("class", "chart-area-label").style("fill", "white").attr("x", xScale(75)).attr("y", yScale(32)).text("Consider Specialist Referral & Treat");
+        } else { // Hip Fracture Chart (Y-Domain is now 0-12)
+            g.append("text").attr("class", "chart-area-label").style("fill", "#166534").attr("x", xScale(75)).attr("y", yScale(2)).text("Give Lifestyle advice");
+            g.append("text").attr("class", "chart-area-label").style("fill", "white").attr("x", xScale(75)).attr("y", yScale(6)).text("Treat");
+            g.append("text").attr("class", "chart-area-label").style("fill", "white").attr("x", xScale(75)).attr("y", yScale(10)).text("Consider Specialist Referral & Treat");
         }
 
         const xAxis = d3.axisBottom(xScale).ticks(10).tickFormat(d => d);
-        const yAxis = d3.axisLeft(yScale).ticks(yDomain[1] / 5);
+        const yAxis = d3.axisLeft(yScale).ticks(yDomain[1] > 20 ? yDomain[1] / 5 : 6);
         g.append("g").attr("transform", `translate(0, ${height})`).call(xAxis);
         g.append("g").call(yAxis);
         
@@ -718,7 +722,8 @@ document.addEventListener('DOMContentLoaded', function () {
     function initializeCharts() {
         const ageDomain = [40, 90];
         charts.major = createChart('#major-fracture-chart-svg', chartThresholds.major, '(%) 10-year probability of Major Osteoporotic Fracture', [0, 40], ageDomain);
-        charts.hip = createChart('#hip-fracture-chart-svg', chartThresholds.hip, '(%) 10-year probability of Hip Fracture', [0, 35], ageDomain);
+        // UPDATED: Changed y-axis domain for hip fracture chart from [0, 35] to [0, 12]
+        charts.hip = createChart('#hip-fracture-chart-svg', chartThresholds.hip, '(%) 10-year probability of Hip Fracture', [0, 12], ageDomain);
     }
     
     window.addEventListener('resize', () => {
