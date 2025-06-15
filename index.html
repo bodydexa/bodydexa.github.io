@@ -283,7 +283,7 @@
                 </div>
                  <div class="text-xs text-gray-500 text-center p-4 border-t space-y-1">
                      <p><strong>Disclaimer:</strong> This tool is for informational purposes only and is not a substitute for professional clinical judgment.</p>
-                     <p><strong>© 2025 Dr Imran Khan. All rights reserved. Version June 2025 Draft version.</strong></p>
+                     <p><strong>© 2025 Dr Bob Marley. All rights reserved. Version June 2025 Draft version.</strong></p>
                  </div>
             </div>
         </main>
@@ -346,9 +346,6 @@ document.addEventListener('DOMContentLoaded', function () {
             vhrt: [[40, 9.7], [45, 9.7], [50, 11.8], [55, 15.4], [60, 19.8], [65, 27.0], [70, 32.7], [75, 32.7], [80, 32.7], [85, 32.7], [90, 32.8]]
         },
         hip: {
-            // UPDATED DATA: Replaced with data from the latest uploaded image.
-            // The "upper threshold" from the image is the 'intervention' line (lower line).
-            // The "lower threshold" from the image is the 'vhrt' line (upper line).
             intervention: [[40, 0.82], [45, 0.70], [50, 0.89], [55, 1.40], [60, 2.27], [62, 2.96], [65, 3.52], [67, 4.57], [70, 5.41], [75, 5.41], [80, 5.41], [85, 5.41], [90, 5.43]],
             vhrt: [[40, 1.33], [45, 1.15], [50, 1.43], [55, 2.30], [60, 3.65], [65, 5.72], [70, 8.71], [75, 8.71], [80, 8.72], [85, 8.71], [90, 8.72]]
         }
@@ -623,22 +620,34 @@ document.addEventListener('DOMContentLoaded', function () {
 
         const labelGroup = chart.g.append("g").attr("class", "plot-elements");
 
-        const xOffset = isAdjusted ? 25 : -25;
+        // UPDATED LOGIC: If age > 80, both labels go left. Otherwise, they go right.
+        let xOffset, textAnchor;
+        
+        if (x > 80) {
+             // Place labels on the left side of the point
+            xOffset = -25;
+            textAnchor = "end";
+        } else {
+            // Place labels on the right side of the point
+            xOffset = 25;
+            textAnchor = "start";
+        }
+        
+        // Vertical offset remains different for each point to avoid overlap.
         const yOffset = isAdjusted ? -25 : 25;
-        const textAnchor = isAdjusted ? "start" : "end";
         
         labelGroup.append("line")
             .attr("class", "point-label-line")
             .attr("x1", pointX)
             .attr("y1", pointY)
             .attr("x2", pointX + xOffset)
-            .attr("y2", pointY + yOffset);
+            .attr("y2", yOffset + pointY);
         
-        const labelText = isAdjusted ? label + '\u00A0' : '\u00A0' + label;
+        const labelText = label + '\u00A0';
 
         const textEl = labelGroup.append("text")
             .attr("class", "point-label-text")
-            .attr("x", pointX + xOffset + (isAdjusted ? 5 : -5))
+            .attr("x", pointX + xOffset + (textAnchor === 'start' ? 5 : -5))
             .attr("y", pointY + yOffset)
             .attr("dy", "0.32em")
             .attr("text-anchor", textAnchor)
@@ -722,7 +731,6 @@ document.addEventListener('DOMContentLoaded', function () {
     function initializeCharts() {
         const ageDomain = [40, 90];
         charts.major = createChart('#major-fracture-chart-svg', chartThresholds.major, '(%) 10-year probability of Major Osteoporotic Fracture', [0, 40], ageDomain);
-        // UPDATED: Changed y-axis domain for hip fracture chart from [0, 35] to [0, 12]
         charts.hip = createChart('#hip-fracture-chart-svg', chartThresholds.hip, '(%) 10-year probability of Hip Fracture', [0, 12], ageDomain);
     }
     
