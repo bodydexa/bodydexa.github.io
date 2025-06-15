@@ -406,23 +406,13 @@ document.addEventListener('DOMContentLoaded', function () {
         }
         
         const scrollPosition = window.scrollY;
-        const resultsTop = resultsColumn.offsetTop;
         const pageHeight = document.body.offsetHeight;
         const viewportHeight = window.innerHeight;
 
-        // Down Arrow Logic
-        if (scrollPosition > resultsTop - 100) {
-            scrollArrowDown.classList.add('opacity-0');
-        } else {
-            scrollArrowDown.classList.remove('opacity-0');
-        }
+        const isAtBottom = scrollPosition + viewportHeight >= pageHeight - 150;
 
-        // Up Arrow Logic
-        if (scrollPosition + viewportHeight >= pageHeight - 150) {
-            scrollArrowUp.classList.remove('hidden');
-        } else {
-            scrollArrowUp.classList.add('hidden');
-        }
+        scrollArrowUp.classList.toggle('hidden', !isAtBottom);
+        scrollArrowDown.classList.toggle('hidden', isAtBottom);
 
     }, { passive: true });
     
@@ -509,8 +499,9 @@ document.addEventListener('DOMContentLoaded', function () {
             }
 
             if (window.innerWidth < 1024) {
-                scrollArrowDown.classList.remove('hidden');
-                scrollArrowDown.classList.remove('opacity-0');
+                const isAtBottom = window.scrollY + window.innerHeight >= document.body.offsetHeight - 150;
+                 scrollArrowDown.classList.toggle('hidden', isAtBottom);
+                 scrollArrowUp.classList.toggle('hidden', !isAtBottom);
             }
 
         }, 0);
