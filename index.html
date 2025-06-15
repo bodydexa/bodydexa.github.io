@@ -164,8 +164,7 @@
                 </div>
 
                 <div id="nogg_factors_card" class="card">
-                     <h2 class="text-xl font-semibold text-gray-800 border-b pb-3 mb-4">3. Risk Factors</h2>
-                     <p class="text-sm text-gray-500 mb-4">Note: These are only considered if there is no recent fracture.</p>
+                     <h2 class="text-xl font-semibold text-gray-800 border-b pb-3 mb-4">3. Other Risk Factors</h2>
                      <div class="space-y-4">
                          <div>
                              <label class="form-label">Current Oral Glucocorticoid (Steroid) Use</label>
@@ -230,7 +229,7 @@
                         </div>
                         <div id="adjustment_reason_container" class="p-4 bg-blue-50 text-blue-800 border-l-4 border-blue-500 rounded-md"><h3 class="font-semibold">Reason for Adjustment:</h3><p id="adjustment_reason" class="text-sm mt-1"></p></div>
                     </div>
-                    <div class="result-card" id="uplift_breakdown_card"><h2 class="text-xl font-semibold text-gray-800 border-b pb-3 mb-4">Uplift Factor Breakdown</h2>
+                    <div class="result-card" id="uplift_breakdown_card"><h2 class="text-xl font-semibold text-gray-800 border-b pb-3 mb-4">Risk Factor Breakdown</h2>
                          <p id="uplift_subheading" class="text-sm text-gray-600 -mt-2 mb-3 hidden"></p>
                         <div id="uplift_breakdown" class="space-y-2 text-sm"></div></div>
 
@@ -283,7 +282,7 @@
                 </div>
                  <div class="text-xs text-gray-500 text-center p-4 border-t space-y-1">
                      <p><strong>Disclaimer:</strong> This tool is for informational purposes only and is not a substitute for professional clinical judgment.</p>
-                     <p><strong>© 2025 Dr Imran Khan. All rights reserved. Version June 2025 Draft version.</strong></p>
+                     <p><strong>© 2025 Dr Bob Marley. All rights reserved. Version June 2025 Draft version.</strong></p>
                  </div>
             </div>
         </main>
@@ -335,11 +334,29 @@ document.addEventListener('DOMContentLoaded', function () {
     
     let charts = {};
 
-    const kanisMultipliers={female:{vertebra:{mof:{40:7.14,50:2.64,60:1.84,70:1.5,80:1.23,90:1.01},hf:{40:2.06,50:1.86,60:1.76,70:1.4,80:1.1,90:1}},hip:{mof:{40:6.77,50:2.38,60:1.6,70:1.25,80:0.95,90:0.77},hf:{40:7.83,50:4.98,60:3.2,70:1.84,80:1,90:.75}},humerus:{mof:{40:4.79,50:1.96,60:1.54,70:1.29,80:1.2,90:1.07},hf:{40:.75,50:.83,60:.94,70:1,80:.94,90:.94}},forearm:{mof:{40:3.53,50:1.46,60:1.25,70:1.28,80:1.01,90:.81},hf:{40:1.57,50:1.51,60:1.52,70:1.35,80:1.15,90:1.06}}},male:{vertebra:{mof:{40:4.18,50:1.92,60:1.57,70:1.44,80:1.24,90:.88},hf:{40:2.12,50:1.9,60:1.78,70:1.63,80:1.26,90:.79}},hip:{mof:{40:5.27,50:2.21,60:1.71,70:1.46,80:1.08,90:.68},hf:{40:11.83,50:7.26,60:4.6,70:2.46,80:1.15,90:.62}},humerus:{mof:{40:2.92,50:1.56,60:1.48,70:1.45,80:1.33,90:.88},hf:{40:1.21,50:1.2,60:1.12,70:1.04,80:1.14,90:.77}},forearm:{mof:{40:2.57,50:1.33,60:1.23,70:1.22,80:1.2,90:.73},hf:{40:2.55,50:2.27,60:2.23,70:1.86,80:1.54,90:1.09}}}};
+    // --- CALCULATION DATA ---
+    /* Recent Sentinel Fracture Multipliers ('Imminent Risk')
+        SOURCE: Kanis, J.A., et al. (2020). "Adjusting conventional FRAX estimates of fracture probability 
+        according to the recency of sentinel fractures." Osteoporosis International, 31(10), 1817-1828.
+        Data transcribed directly from appendix tables (Tables 4, 5, 6, 7).
+    */
+    const kanisMultipliers = {
+        female: {
+            vertebra: { mof: { 40: 7.14, 50: 2.62, 60: 1.84, 70: 1.50, 80: 1.23, 90: 1.01 }, hf: { 40: 2.08, 50: 1.88, 60: 1.75, 70: 1.40, 80: 1.10, 90: 0.98 } },
+            hip:      { mof: { 40: 6.77, 50: 2.38, 60: 1.60, 70: 1.23, 80: 0.95, 90: 0.74 }, hf: { 40: 7.83, 50: 4.99, 60: 3.26, 70: 1.84, 80: 1.04, 90: 0.73 } },
+            humerus:  { mof: { 40: 4.79, 50: 1.96, 60: 1.54, 70: 1.39, 80: 1.26, 90: 1.08 }, hf: { 40: 1.57, 50: 1.51, 60: 1.52, 70: 1.33, 80: 1.13, 90: 1.04 } },
+            forearm:  { mof: { 40: 3.53, 50: 1.46, 60: 1.16, 70: 1.09, 80: 1.01, 90: 0.81 }, hf: { 40: 0.73, 50: 0.82, 60: 0.95, 70: 0.99, 80: 0.98, 90: 0.94 } }
+        },
+        male: {
+            vertebra: { mof: { 40: 4.18, 50: 1.92, 60: 1.57, 70: 1.48, 80: 1.24, 90: 0.89 }, hf: { 40: 2.13, 50: 1.90, 60: 1.76, 70: 1.38, 80: 1.03, 90: 0.82 } },
+            hip:      { mof: { 40: 5.31, 50: 2.28, 60: 1.73, 70: 1.46, 80: 1.08, 90: 0.72 }, hf: { 40: 11.83, 50: 7.36, 60: 4.66, 70: 2.46, 80: 1.24, 90: 0.74 } },
+            humerus:  { mof: { 40: 3.08, 50: 1.56, 60: 1.42, 70: 1.45, 80: 1.25, 90: 0.85 }, hf: { 40: 2.38, 50: 2.27, 60: 2.23, 70: 1.84, 80: 1.35, 90: 0.98 } },
+            forearm:  { mof: { 40: 2.61, 50: 1.33, 60: 1.23, 70: 1.33, 80: 1.22, 90: 0.80 }, hf: { 40: 0.94, 50: 1.05, 60: 1.21, 70: 1.23, 80: 1.12, 90: 0.88 } }
+        }
+    };
     const meanHalValues = { male: 121.3, female: 104.7 };
     const halValidationRanges = { male: {min: 99.1, max: 143.5}, female: {min: 86.1, max: 123.3}};
     
-    // --- NOGG CHART THRESHOLD DATA ---
     const chartThresholds = {
         major: {
             intervention: [[40, 6.0], [45, 6.0], [50, 7.4], [55, 9.5], [60, 12.6], [65, 16.9], [70, 20.4], [75, 20.5], [80, 20.5], [85, 20.5], [90, 20.5]],
@@ -358,6 +375,7 @@ document.addEventListener('DOMContentLoaded', function () {
         under50Caution: `<p class="font-semibold text-yellow-800">Interpret with Caution (Age < 50)</p><p>NOGG threshold treatment guidlines are recommended to be used in those 50 or over. Please interpret with caution under this age and consider investigation for secondary causes if results falls above the low risk threshold criteria.</p>`
     };
 
+    // --- UI & EVENT LISTENERS ---
     function showModal(message) {
         modalMessage.textContent = message;
         modal.classList.remove('hidden');
@@ -372,10 +390,8 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     recentFractureToggle.forEach(radio => radio.addEventListener('change', e => {
-        const isDisabled = e.target.value === 'yes';
-        recentFractureDetails.classList.toggle('hidden', !isDisabled);
-        noggFactorsCard.classList.toggle('opacity-50', isDisabled);
-        noggFactorsCard.classList.toggle('pointer-events-none', isDisabled);
+        const showDetails = e.target.value === 'yes';
+        recentFractureDetails.classList.toggle('hidden', !showDetails);
     }));
 
     calculateBtn.addEventListener('click', runFullCalculation);
@@ -417,6 +433,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     }, { passive: true });
     
+    // --- CORE CALCULATION LOGIC ---
     function runFullCalculation() {
         if (window.innerWidth < 1024) { 
             resultsColumn.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -444,48 +461,65 @@ document.addEventListener('DOMContentLoaded', function () {
             if (hal_mm < range.min || hal_mm > range.max) { showModal(`Hip Axis Length for a ${sex} must be between ${range.min} and ${range.max} mm.`); return; }
         }
         
-        let adjustment_reason="", mof_multiplier=1, hf_multiplier=1, potential_uplifts=[];
+        let mof_multiplier=1, hf_multiplier=1;
+        let potential_uplifts=[];
 
-        if(has_recent_fracture){
-            upliftBreakdownCard.classList.add('hidden');
+        // 1. Recent Sentinel Fracture
+        if (has_recent_fracture) {
             const age_map_mof = kanisMultipliers[sex][recent_fracture_site].mof;
             const age_map_hf = kanisMultipliers[sex][recent_fracture_site].hf;
-            mof_multiplier = getMultiplierForAge(age_map_mof, age);
-            hf_multiplier = getMultiplierForAge(age_map_hf, age);
-            adjustment_reason = `Imminent Risk: Applied recent fracture multiplier for a ${recent_fracture_site}. MOF x${mof_multiplier.toFixed(2)}, HF x${hf_multiplier.toFixed(2)}.`;
-        } else {
-            upliftBreakdownCard.classList.remove('hidden');
-            if (is_gc_high_dose) potential_uplifts.push({reason: 'High-dose glucocorticoids (>7.5mg/day)', mof: 1.15, hf: 1.20});
-            if (!isNaN(ls_tscore) && !isNaN(fn_tscore)) {
-                const t_score_diff = Math.round(ls_tscore) - Math.round(fn_tscore);
-                if (t_score_diff !== 0) {
-                    const bmd_multiplier = 1.0 - (t_score_diff * 0.10);
-                    potential_uplifts.push({reason: `Discordant BMD (T-score diff: ${t_score_diff})`, mof: bmd_multiplier, hf: 1});
-                }
+            const sentinel_mof_multiplier = getMultiplierForAge(age_map_mof, age);
+            const sentinel_hf_multiplier = getMultiplierForAge(age_map_hf, age);
+            potential_uplifts.push({
+                reason: `Recent Sentinel Fracture (${recent_fracture_site})`,
+                mof: sentinel_mof_multiplier,
+                hf: sentinel_hf_multiplier
+            });
+        }
+        
+        // 2. High-Dose Glucocorticoids (>7.5mg/day)
+        // SOURCE: Standard multiplier used in FRAX development and guidelines.
+        if (is_gc_high_dose) potential_uplifts.push({reason: 'High-dose glucocorticoids (>7.5mg/day)', mof: 1.15, hf: 1.20});
+        
+        // 3. Recurrent Falls (>=2 in last year)
+        // SOURCE: Standard multiplier used in FRAX development and guidelines.
+        if (has_recurrent_falls) potential_uplifts.push({reason: 'Recurrent falls (≥2)', mof: 1.30, hf: 1.30});
+        
+        // 4. BMD Discordance
+        /* SOURCE: Johansson, H., et al. (2014). "Impact of Femoral Neck and Lumbar Spine BMD Discordances 
+           on FRAX Probabilities in Women..." Calcif Tissue Int, 95, 428-435.
+           Implements the "10% per SD" rule.
+        */
+        if (!isNaN(ls_tscore) && !isNaN(fn_tscore)) {
+            const t_score_diff = Math.round(ls_tscore) - Math.round(fn_tscore);
+            if (t_score_diff !== 0) {
+                const bmd_multiplier = 1.0 - (t_score_diff * 0.10);
+                potential_uplifts.push({reason: `Discordant BMD (T-score diff: ${t_score_diff})`, mof: bmd_multiplier, hf: 1});
             }
-            if (has_recurrent_falls) potential_uplifts.push({reason: 'Recurrent falls (≥2)', mof: 1.3, hf: 1.3});
-            if (!isNaN(hal_mm)) {
-                const diff_mm = hal_mm - meanHalValues[sex];
-                let hal_adj_percent = (diff_mm > 0) ? (diff_mm * 4.7) : (diff_mm * 3.8);
-                potential_uplifts.push({reason: `Hip Axis Length (${diff_mm.toFixed(1)}mm from mean)`, mof: 1, hf: 1 + hal_adj_percent / 100});
-            }
+        }
+        
+        // 5. Hip Axis Length (HAL)
+        /* SOURCE: Leslie, W. D., et al. (2015). "Adjusting Hip Fracture Probability in Men and Women 
+           Using Hip Axis Length..." J Clin Densitom, 1-6.
+           Implements the bilinear adjustment rule: +4.7% per mm above mean, -3.8% per mm below mean.
+        */
+        if (!isNaN(hal_mm)) {
+            const diff_mm = hal_mm - meanHalValues[sex];
+            let hal_adj_percent = (diff_mm > 0) ? (diff_mm * 4.7) : (diff_mm * 3.8);
+            const hal_multiplier = 1 + (hal_adj_percent / 100);
+            potential_uplifts.push({reason: `Hip Axis Length (${diff_mm.toFixed(1)}mm from mean)`, mof: 1, hf: hal_multiplier});
+        }
 
-            if (potential_uplifts.length > 0) {
-                mof_multiplier = Math.max(...potential_uplifts.map(u => u.mof), 1);
-                hf_multiplier = Math.max(...potential_uplifts.map(u => u.hf), 1);
-                adjustment_reason = "Risk Factor Adjustment: Applied the largest single uplift from the factors below.";
-            } else {
-                adjustment_reason = "No additional risk factors for adjustment were present.";
-            }
+        // Apply the dominant (largest) multiplier for MOF and HF separately.
+        if (potential_uplifts.length > 0) {
+            mof_multiplier = Math.max(...potential_uplifts.map(u => u.mof), 1);
+            hf_multiplier = Math.max(...potential_uplifts.map(u => u.hf), 1);
         }
         
         const adjusted_mof = initial_mof * mof_multiplier;
         const adjusted_hf = initial_hf * hf_multiplier;
         
-        allResultsContainer.dataset.mofMultiplier = mof_multiplier;
-        allResultsContainer.dataset.hfMultiplier = hf_multiplier;
-        
-        displayUpliftResults({initial_mof, initial_hf, adjusted_mof, adjusted_hf, adjustment_reason, potential_uplifts, dominant_mof_multiplier: mof_multiplier, dominant_hf_multiplier: hf_multiplier});
+        displayUpliftResults({initial_mof, initial_hf, adjusted_mof, adjusted_hf, potential_uplifts, dominant_mof_multiplier: mof_multiplier, dominant_hf_multiplier: hf_multiplier});
         
         setTimeout(() => {
             initializeCharts();
@@ -504,18 +538,22 @@ document.addEventListener('DOMContentLoaded', function () {
                  scrollArrowDown.classList.toggle('hidden', isAtBottom);
                  scrollArrowUp.classList.toggle('hidden', !isAtBottom);
             }
-
         }, 0);
     }
 
     function getMultiplierForAge(age_map, age) {
-        const ageKeys = Object.keys(age_map).map(Number);
+        const ageKeys = Object.keys(age_map).map(Number).sort((a, b) => a - b);
         if (age <= ageKeys[0]) return age_map[ageKeys[0]];
-        if (age >= ageKeys[ageKeys.length - 1]) return age_map[ageKeys.length - 1];
-        const closestAge = ageKeys.reduce((p, c) => Math.abs(c - age) < Math.abs(p - age) ? c : p);
+        const lastAgeKey = ageKeys[ageKeys.length - 1];
+        if (age >= lastAgeKey) return age_map[lastAgeKey];
+        
+        let closestAge = ageKeys.reduce((prev, curr) => {
+            return (Math.abs(curr - age) < Math.abs(prev - age) ? curr : prev);
+        });
         return age_map[closestAge];
     }
     
+    // --- DISPLAY & UI UPDATE FUNCTIONS ---
     function displayUpliftResults(data) {
         document.getElementById('result_initial_mof').textContent = `${data.initial_mof.toFixed(1)}%`;
         document.getElementById('result_initial_hf').textContent = `${data.initial_hf.toFixed(1)}%`;
@@ -523,40 +561,38 @@ document.addEventListener('DOMContentLoaded', function () {
         document.getElementById('result_adjusted_hf').textContent = `${data.adjusted_hf.toFixed(1)}%`;
 
         const adjReasonContainer = document.getElementById('adjustment_reason_container');
-        const adjReasonText = document.getElementById('adjustment_reason');
+        const upliftBreakdownCard = document.getElementById('uplift_breakdown_card');
         const upliftSubheading = document.getElementById('uplift_subheading');
-
-        adjReasonContainer.classList.add('hidden');
-        upliftSubheading.classList.add('hidden');
-
-        if (data.adjustment_reason === "Risk Factor Adjustment: Applied the largest single uplift from the factors below.") {
-            upliftSubheading.textContent = "(Single largest uplift applied from the factors below)";
-            upliftSubheading.classList.remove('hidden');
-        } else {
-            adjReasonText.textContent = data.adjustment_reason;
-            adjReasonContainer.classList.remove('hidden');
-        }
         
         upliftBreakdownContainer.innerHTML = '';
+
         if (data.potential_uplifts.length > 0) {
+            upliftBreakdownCard.classList.remove('hidden');
+            adjReasonContainer.classList.add('hidden');
+            upliftSubheading.textContent = "(The single largest uplift for MOF and HF from the factors below was applied)";
+            upliftSubheading.classList.remove('hidden');
+            
             const header = `<div class="grid grid-cols-3 font-semibold text-gray-600 border-b pb-1"><div>Factor</div><div class="text-center">MOF Multiplier</div><div class="text-center">HF Multiplier</div></div>`;
             upliftBreakdownContainer.insertAdjacentHTML('beforeend', header);
             data.potential_uplifts.forEach(uplift => {
-                const isDominantMOF = uplift.mof.toFixed(4) === data.dominant_mof_multiplier.toFixed(4) && uplift.mof !== 1;
-                const isDominantHF = uplift.hf.toFixed(4) === data.dominant_hf_multiplier.toFixed(4) && uplift.hf !== 1;
+                const isDominantMOF = uplift.mof.toFixed(4) === data.dominant_mof_multiplier.toFixed(4) && uplift.mof > 1;
+                const isDominantHF = uplift.hf.toFixed(4) === data.dominant_hf_multiplier.toFixed(4) && uplift.hf > 1;
                 const mofClass = isDominantMOF ? 'font-bold text-blue-600' : '';
                 const hfClass = isDominantHF ? 'font-bold text-blue-600' : '';
                 const row = `<div class="grid grid-cols-3 items-center border-b border-gray-200 py-2 last:border-b-0"><div>${uplift.reason}</div><div class="text-center ${mofClass}">x${uplift.mof.toFixed(2)} ${isDominantMOF?'<span class="text-xs text-blue-500">(Applied)</span>':''}</div><div class="text-center ${hfClass}">x${uplift.hf.toFixed(2)} ${isDominantHF?'<span class="text-xs text-blue-500">(Applied)</span>':''}</div></div>`;
                 upliftBreakdownContainer.insertAdjacentHTML('beforeend', row);
             });
-        } else if (!upliftBreakdownCard.classList.contains('hidden')) {
-            upliftBreakdownContainer.innerHTML = '<p class="text-gray-500">No risk factors for adjustment were applicable.</p>';
+        } else {
+            upliftBreakdownCard.classList.add('hidden');
+            adjReasonContainer.classList.remove('hidden');
+            document.getElementById('adjustment_reason').textContent = "No additional risk factors for adjustment were present.";
         }
 
         resultsPlaceholder.classList.add('hidden');
         allResultsContainer.classList.remove('hidden');
     }
     
+    // --- D3 CHARTING FUNCTIONS ---
     function createChart(selector, data, title, yDomain, ageDomain) {
         const svg = d3.select(selector);
         svg.selectAll("*").remove();
@@ -585,12 +621,11 @@ document.addEventListener('DOMContentLoaded', function () {
         g.append("path").datum(points).attr("class", "d3-area-high-risk").attr("d", highRiskArea);
         g.append("path").datum(points).attr("class", "d3-area-very-high-risk").attr("d", vhrtArea);
 
-        // Adjust text label Y positions based on Y-domain
-        if (yDomain[1] === 40) { // Major Fracture Chart
+        if (yDomain[1] === 40) { 
             g.append("text").attr("class", "chart-area-label").style("fill", "#166534").attr("x", xScale(75)).attr("y", yScale(10)).text("Give Lifestyle advice");
             g.append("text").attr("class", "chart-area-label").style("fill", "white").attr("x", xScale(75)).attr("y", yScale(26)).text("Treat");
             g.append("text").attr("class", "chart-area-label").style("fill", "white").attr("x", xScale(75)).attr("y", yScale(36)).text("Consider Specialist Referral & Treat");
-        } else { // Hip Fracture Chart (Y-Domain is now 0-12)
+        } else {
             g.append("text").attr("class", "chart-area-label").style("fill", "#166534").attr("x", xScale(75)).attr("y", yScale(2)).text("Give Lifestyle advice");
             g.append("text").attr("class", "chart-area-label").style("fill", "white").attr("x", xScale(75)).attr("y", yScale(6)).text("Treat");
             g.append("text").attr("class", "chart-area-label").style("fill", "white").attr("x", xScale(75)).attr("y", yScale(10)).text("Consider Specialist Referral & Treat");
@@ -617,23 +652,18 @@ document.addEventListener('DOMContentLoaded', function () {
         const pointX = chart.xScale(x);
         const pointY = chart.yScale(y);
         const isAdjusted = type === 'adjusted';
-
         const labelGroup = chart.g.append("g").attr("class", "plot-elements");
 
-        // UPDATED LOGIC: If age > 80, both labels go left. Otherwise, they go right.
         let xOffset, textAnchor;
         
         if (x > 80) {
-             // Place labels on the left side of the point
             xOffset = -25;
             textAnchor = "end";
         } else {
-            // Place labels on the right side of the point
             xOffset = 25;
             textAnchor = "start";
         }
         
-        // Vertical offset remains different for each point to avoid overlap.
         const yOffset = isAdjusted ? -25 : 25;
         
         labelGroup.append("line")
@@ -644,7 +674,6 @@ document.addEventListener('DOMContentLoaded', function () {
             .attr("y2", yOffset + pointY);
         
         const labelText = label + '\u00A0';
-
         const textEl = labelGroup.append("text")
             .attr("class", "point-label-text")
             .attr("x", pointX + xOffset + (textAnchor === 'start' ? 5 : -5))
