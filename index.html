@@ -282,7 +282,7 @@
                 </div>
                  <div class="text-xs text-gray-500 text-center p-4 border-t space-y-1">
                      <p><strong>Disclaimer:</strong> This tool is for informational purposes only and is not a substitute for professional clinical judgment.</p>
-                     <p><strong>© 2025 Dr Imran Khan All rights reserved. Version 15th June 2025 [Draft version] </strong></p>
+                     <p><strong>© 2025 Dr Imran Khan. All rights reserved. Version 18th June 2025 Draft version.</strong></p>
                  </div>
             </div>
         </main>
@@ -299,6 +299,9 @@
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" />
       </svg>
     </a>
+
+    <!-- Visit Counter -->
+    <div id="visit-counter" class="fixed bottom-4 right-4 text-xs text-gray-500 bg-white bg-opacity-75 px-2 py-1 rounded-md shadow z-50"></div>
 
     <!-- Custom Modal -->
     <div id="custom-modal" class="modal-overlay hidden">
@@ -368,7 +371,6 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     };
     
-    // UPDATED: Hyperlinks added to guidance text
     const guidanceText = {
         low: `<p class="font-semibold text-green-800">Low Risk</p><p>Where both the MOF and Hip fracture probabilities fall below the treatment threshold, <a href="https://www.nogg.org.uk/full-guideline/section-5-non-pharmacological-management-osteoporosis" target="_blank" class="text-blue-600 underline hover:text-blue-800">lifestyle advice</a> should be given and a further assessment is recommended in 5 years or less depending on the clinical context (e.g. new clinical risk factors develop, or a fragility fracture occurs).</p>`,
         high: `<p class="font-semibold text-red-800">High Risk</p><p>In individuals with probabilities of a major osteoporotic fracture and/or hip fracture AT or ABOVE either intervention threshold, <a href="https://www.nogg.org.uk/full-guideline/section-6-pharmacological-treatment-options" target="_blank" class="text-blue-600 underline hover:text-blue-800">treatment to reduce fracture risk</a> should be offered.</p>`,
@@ -780,6 +782,20 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         }, 100);
     });
+
+    // --- Visit Counter Logic ---
+    const visitCounterElement = document.getElementById('visit-counter');
+    let visitCount = localStorage.getItem('pageVisitCount');
+
+    if (visitCount) {
+        visitCount = Number(visitCount) + 1;
+    } else {
+        visitCount = 1;
+    }
+
+    localStorage.setItem('pageVisitCount', visitCount);
+    // UPDATED: Removed "Visits: " text
+    visitCounterElement.textContent = visitCount;
 });
 </script>
 
