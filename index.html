@@ -282,7 +282,7 @@
                 </div>
                  <div class="text-xs text-gray-500 text-center p-4 border-t space-y-1">
                      <p><strong>Disclaimer:</strong> This tool is for informational purposes only and is not a substitute for professional clinical judgment.</p>
-                     <p><strong>© 2025 Dr Imran Khan. All rights reserved. Version 18th June 2025 Draft version.</strong></p>
+                     <p><strong>© 2025 Dr Imran Khan. All rights reserved. Version 25th June 2025 [Draft version].</strong></p>
                  </div>
             </div>
         </main>
@@ -299,8 +299,8 @@
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" />
       </svg>
     </a>
-
-    <!-- Visit Counter -->
+    
+    <!-- UPDATED: Visit Counter Element -->
     <div id="visit-counter" class="fixed bottom-4 right-4 text-xs text-gray-500 bg-white bg-opacity-75 px-2 py-1 rounded-md shadow z-50"></div>
 
     <!-- Custom Modal -->
@@ -312,8 +312,53 @@
     </div>
 
 
-<script>
+<script type="module">
+    // UPDATED: Firebase SDK imports
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getFirestore, doc, getDoc, setDoc, updateDoc, increment } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    
+    // --- Visit Counter Logic ---
+    async function initializeGlobalCounter() {
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+        await signInAnonymously(auth);
+
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                const appId = typeof __app_id !== 'undefined' ? __app_id : 'nogg-calculator-app';
+                const counterRef = doc(db, `artifacts/${appId}/public/data/siteMetrics/visits`);
+                
+                try {
+                    // Atomically increment the count on the server
+                    await updateDoc(counterRef, {
+                        count: increment(1)
+                    });
+                } catch (e) {
+                    // If the document doesn't exist, create it.
+                    if (e.code === 'not-found') {
+                       await setDoc(counterRef, { count: 1 });
+                    } else {
+                        console.error("Error incrementing counter:", e);
+                    }
+                }
+
+                // Get the updated count to display it
+                const docSnap = await getDoc(counterRef);
+                if (docSnap.exists()) {
+                    const visitCounterElement = document.getElementById('visit-counter');
+                    visitCounterElement.textContent = docSnap.data().count;
+                }
+            }
+        });
+    }
+
+
 document.addEventListener('DOMContentLoaded', function () {
+    initializeGlobalCounter();
+
     // --- DOM ELEMENT SELECTORS ---
     const calculatorForm = document.getElementById('calculator-form');
     const calculateBtn = document.getElementById('calculateBtn');
@@ -782,20 +827,6 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         }, 100);
     });
-
-    // --- Visit Counter Logic ---
-    const visitCounterElement = document.getElementById('visit-counter');
-    let visitCount = localStorage.getItem('pageVisitCount');
-
-    if (visitCount) {
-        visitCount = Number(visitCount) + 1;
-    } else {
-        visitCount = 1;
-    }
-
-    localStorage.setItem('pageVisitCount', visitCount);
-    // UPDATED: Removed "Visits: " text
-    visitCounterElement.textContent = visitCount;
 });
 </script>
 
