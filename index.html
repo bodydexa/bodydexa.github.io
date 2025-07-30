@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Integrated FRAX® Adjustment and NOGG Threshold Calculator</title>
+    <title>FRAX uplifter with Integrated NOGG Guidance</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -111,7 +111,7 @@
 <body class="bg-gray-100">
     <div class="container mx-auto p-4 md:p-8 max-w-7xl">
         <header class="text-center mb-8">
-            <h1 class="text-3xl md:text-4xl font-bold text-gray-800">Integrated FRAX® & NOGG Calculator</h1>
+            <h1 class="text-3xl md:text-4xl font-bold text-gray-800">FRAX uplifter with Integrated NOGG Guidance</h1>
             <p class="mt-2 text-md text-gray-600">Enter patient data, calculate the adjusted risk, and view the NOGG treatment recommendation.</p>
         </header>
 
@@ -282,7 +282,7 @@
                 </div>
                  <div class="text-xs text-gray-500 text-center p-4 border-t space-y-1">
                      <p><strong>Disclaimer:</strong> This tool is for informational purposes only and is not a substitute for professional clinical judgment.</p>
-                     <p><strong>© 2025 Dr Imran Khan. All rights reserved. Version 25th June 2025 [Draft version].</strong></p>
+                     <p><strong>© 2025 Dr Imran Khan. All rights reserved. Updated July 30th 2025, Beta version.</strong></p>
                  </div>
             </div>
         </main>
@@ -300,7 +300,7 @@
       </svg>
     </a>
     
-    <!-- UPDATED: Third-party Visit Counter -->
+    <!-- Visit Counter -->
     <div class="fixed bottom-4 right-4 z-50">
         <a href="https://www.freecounterstat.com" title="free counter"><img src="https://counter10.optistats.ovh/private/freecounterstat.php?c=xtl2n25my3368g8g7db7b15d2p396g9c" border="0" title="free counter" alt="free counter"></a>
     </div>
@@ -439,6 +439,12 @@ document.addEventListener('DOMContentLoaded', function () {
     }, { passive: true });
     
     // --- CORE CALCULATION LOGIC ---
+    
+    // UPDATED: Custom rounding function for "round half away from zero"
+    function roundAwayFromZero(num) {
+        return Math.sign(num) * Math.round(Math.abs(num));
+    }
+
     function runFullCalculation() {
         if (window.innerWidth < 1024) { 
             resultsColumn.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -483,42 +489,33 @@ document.addEventListener('DOMContentLoaded', function () {
         }
         
         // 2. High-Dose Glucocorticoids (>7.5mg/day)
-        // SOURCE: Standard multiplier used in FRAX development and guidelines.
         if (is_gc_high_dose) potential_uplifts.push({reason: 'High-dose glucocorticoids (>7.5mg/day)', mof: 1.15, hf: 1.20});
         
         // 3. Recurrent Falls (>=2 in last year)
-        // SOURCE: Standard multiplier used in FRAX development and guidelines.
         if (has_recurrent_falls) potential_uplifts.push({reason: 'Recurrent falls (≥2)', mof: 1.30, hf: 1.30});
         
         // 4. BMD Discordance
-        /* SOURCE: Johansson, H., et al. (2014). "Impact of Femoral Neck and Lumbar Spine BMD Discordances 
-           on FRAX Probabilities in Women..." Calcif Tissue Int, 95, 428-435.
-           Implements the "10% per SD" rule.
-        */
         if (!isNaN(ls_tscore) && !isNaN(fn_tscore)) {
-            const t_score_diff = Math.round(ls_tscore) - Math.round(fn_tscore);
+            // UPDATED: Using custom rounding function
+            const t_score_diff = roundAwayFromZero(ls_tscore) - roundAwayFromZero(fn_tscore);
             if (t_score_diff !== 0) {
                 const bmd_multiplier = 1.0 - (t_score_diff * 0.10);
-                potential_uplifts.push({reason: `Discordant BMD (T-score diff: ${t_score_diff})`, mof: bmd_multiplier, hf: 1});
+                potential_uplifts.push({reason: `Discordant BMD (T-score diff: ${t_score_diff})`, mof: bmd_multiplier, hf: "N/A"});
             }
         }
         
         // 5. Hip Axis Length (HAL)
-        /* SOURCE: Leslie, W. D., et al. (2015). "Adjusting Hip Fracture Probability in Men and Women 
-           Using Hip Axis Length..." J Clin Densitom, 1-6.
-           Implements the bilinear adjustment rule: +4.7% per mm above mean, -3.8% per mm below mean.
-        */
         if (!isNaN(hal_mm)) {
             const diff_mm = hal_mm - meanHalValues[sex];
             let hal_adj_percent = (diff_mm > 0) ? (diff_mm * 4.7) : (diff_mm * 3.8);
             const hal_multiplier = 1 + (hal_adj_percent / 100);
-            potential_uplifts.push({reason: `Hip Axis Length (${diff_mm.toFixed(1)}mm from mean)`, mof: 1, hf: hal_multiplier});
+            potential_uplifts.push({reason: `Hip Axis Length (${diff_mm.toFixed(1)}mm from mean)`, mof: "N/A", hf: hal_multiplier});
         }
 
         // Apply the dominant (largest) multiplier for MOF and HF separately.
         if (potential_uplifts.length > 0) {
-            mof_multiplier = Math.max(...potential_uplifts.map(u => u.mof), 1);
-            hf_multiplier = Math.max(...potential_uplifts.map(u => u.hf), 1);
+            mof_multiplier = Math.max(...potential_uplifts.map(u => (typeof u.mof === 'number' ? u.mof : 1)), 1);
+            hf_multiplier = Math.max(...potential_uplifts.map(u => (typeof u.hf === 'number' ? u.hf : 1)), 1);
         }
         
         const adjusted_mof = initial_mof * mof_multiplier;
@@ -580,11 +577,15 @@ document.addEventListener('DOMContentLoaded', function () {
             const header = `<div class="grid grid-cols-3 font-semibold text-gray-600 border-b pb-1"><div>Factor</div><div class="text-center">MOF Multiplier</div><div class="text-center">HF Multiplier</div></div>`;
             upliftBreakdownContainer.insertAdjacentHTML('beforeend', header);
             data.potential_uplifts.forEach(uplift => {
-                const isDominantMOF = uplift.mof.toFixed(4) === data.dominant_mof_multiplier.toFixed(4) && uplift.mof > 1;
-                const isDominantHF = uplift.hf.toFixed(4) === data.dominant_hf_multiplier.toFixed(4) && uplift.hf > 1;
+                const isDominantMOF = typeof uplift.mof === 'number' && uplift.mof.toFixed(4) === data.dominant_mof_multiplier.toFixed(4) && uplift.mof !== 1;
+                const isDominantHF = typeof uplift.hf === 'number' && uplift.hf.toFixed(4) === data.dominant_hf_multiplier.toFixed(4) && uplift.hf !== 1;
                 const mofClass = isDominantMOF ? 'font-bold text-blue-600' : '';
                 const hfClass = isDominantHF ? 'font-bold text-blue-600' : '';
-                const row = `<div class="grid grid-cols-3 items-center border-b border-gray-200 py-2 last:border-b-0"><div>${uplift.reason}</div><div class="text-center ${mofClass}">x${uplift.mof.toFixed(2)} ${isDominantMOF?'<span class="text-xs text-blue-500">(Applied)</span>':''}</div><div class="text-center ${hfClass}">x${uplift.hf.toFixed(2)} ${isDominantHF?'<span class="text-xs text-blue-500">(Applied)</span>':''}</div></div>`;
+                
+                const mofText = typeof uplift.mof === 'number' ? `x${uplift.mof.toFixed(2)}` : 'N/A';
+                const hfText = typeof uplift.hf === 'number' ? `x${uplift.hf.toFixed(2)}` : 'N/A';
+
+                const row = `<div class="grid grid-cols-3 items-center border-b border-gray-200 py-2 last:border-b-0"><div>${uplift.reason}</div><div class="text-center ${mofClass}">${mofText} ${isDominantMOF?'<span class="text-xs text-blue-500">(Applied)</span>':''}</div><div class="text-center ${hfClass}">${hfText} ${isDominantHF?'<span class="text-xs text-blue-500">(Applied)</span>':''}</div></div>`;
                 upliftBreakdownContainer.insertAdjacentHTML('beforeend', row);
             });
         } else {
