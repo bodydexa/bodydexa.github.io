@@ -282,7 +282,7 @@
                 </div>
                  <div class="text-xs text-gray-500 text-center p-4 border-t space-y-1">
                      <p><strong>Disclaimer:</strong> This tool is for informational purposes only and is not a substitute for professional clinical judgment.</p>
-                     <p><strong>© 2025 Dr Imran Khan. All rights reserved. Updated July 30th 2025, Beta version.</strong></p>
+                     <p><strong>© 2025 Dr Bob Marley. All rights reserved. Version June 2025 Draft version.</strong></p>
                  </div>
             </div>
         </main>
@@ -341,22 +341,21 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // --- CALCULATION DATA ---
     /* Recent Sentinel Fracture Multipliers ('Imminent Risk')
-        SOURCE: Kanis, J.A., et al. (2020). "Adjusting conventional FRAX estimates of fracture probability 
-        according to the recency of sentinel fractures." Osteoporosis International, 31(10), 1817-1828.
-        Data transcribed directly from appendix tables (Tables 4, 5, 6, 7).
+        SOURCE: Kanis JA, et al. Osteoporos Int. 2020;31(10):1817-1828.
+        Data transcribed directly from appendix tables and aligned with specification document.
     */
     const kanisMultipliers = {
         female: {
-            vertebra: { mof: { 40: 7.14, 50: 2.62, 60: 1.84, 70: 1.50, 80: 1.23, 90: 1.01 }, hf: { 40: 2.08, 50: 1.88, 60: 1.75, 70: 1.40, 80: 1.10, 90: 0.98 } },
-            hip:      { mof: { 40: 6.77, 50: 2.38, 60: 1.60, 70: 1.23, 80: 0.95, 90: 0.74 }, hf: { 40: 7.83, 50: 4.99, 60: 3.26, 70: 1.84, 80: 1.04, 90: 0.73 } },
-            humerus:  { mof: { 40: 4.79, 50: 1.96, 60: 1.54, 70: 1.39, 80: 1.26, 90: 1.08 }, hf: { 40: 1.57, 50: 1.51, 60: 1.52, 70: 1.33, 80: 1.13, 90: 1.04 } },
-            forearm:  { mof: { 40: 3.53, 50: 1.46, 60: 1.16, 70: 1.09, 80: 1.01, 90: 0.81 }, hf: { 40: 0.73, 50: 0.82, 60: 0.95, 70: 0.99, 80: 0.98, 90: 0.94 } }
+            vertebra: { mof: { 40: 7.14, 50: 2.64, 60: 1.84, 70: 1.50, 80: 1.23, 90: 1.01 }, hf: { 40: 2.06, 50: 1.86, 60: 1.76, 70: 1.40, 80: 1.10, 90: 1.00 } },
+            hip:      { mof: { 40: 6.77, 50: 2.38, 60: 1.60, 70: 1.25, 80: 0.95, 90: 0.77 }, hf: { 40: 7.83, 50: 4.98, 60: 3.20, 70: 1.84, 80: 1.00, 90: 0.75 } },
+            humerus:  { mof: { 40: 4.79, 50: 1.96, 60: 1.54, 70: 1.29, 80: 1.20, 90: 1.07 }, hf: { 40: 0.75, 50: 0.83, 60: 0.94, 70: 1.00, 80: 0.94, 90: 0.94 } },
+            forearm:  { mof: { 40: 3.53, 50: 1.46, 60: 1.25, 70: 1.28, 80: 1.01, 90: 0.81 }, hf: { 40: 1.57, 50: 1.51, 60: 1.52, 70: 1.35, 80: 1.15, 90: 1.06 } }
         },
         male: {
-            vertebra: { mof: { 40: 4.18, 50: 1.92, 60: 1.57, 70: 1.48, 80: 1.24, 90: 0.89 }, hf: { 40: 2.13, 50: 1.90, 60: 1.76, 70: 1.38, 80: 1.03, 90: 0.82 } },
-            hip:      { mof: { 40: 5.31, 50: 2.28, 60: 1.73, 70: 1.46, 80: 1.08, 90: 0.72 }, hf: { 40: 11.83, 50: 7.36, 60: 4.66, 70: 2.46, 80: 1.24, 90: 0.74 } },
-            humerus:  { mof: { 40: 3.08, 50: 1.56, 60: 1.42, 70: 1.45, 80: 1.25, 90: 0.85 }, hf: { 40: 2.38, 50: 2.27, 60: 2.23, 70: 1.84, 80: 1.35, 90: 0.98 } },
-            forearm:  { mof: { 40: 2.61, 50: 1.33, 60: 1.23, 70: 1.33, 80: 1.22, 90: 0.80 }, hf: { 40: 0.94, 50: 1.05, 60: 1.21, 70: 1.23, 80: 1.12, 90: 0.88 } }
+            vertebra: { mof: { 40: 4.18, 50: 1.92, 60: 1.57, 70: 1.44, 80: 1.24, 90: 0.88 }, hf: { 40: 2.12, 50: 1.90, 60: 1.78, 70: 1.63, 80: 1.26, 90: 0.79 } },
+            hip:      { mof: { 40: 5.27, 50: 2.21, 60: 1.71, 70: 1.46, 80: 1.08, 90: 0.68 }, hf: { 40: 11.83, 50: 7.26, 60: 4.60, 70: 2.46, 80: 1.15, 90: 0.62 } },
+            humerus:  { mof: { 40: 2.92, 50: 1.56, 60: 1.48, 70: 1.45, 80: 1.33, 90: 0.88 }, hf: { 40: 1.21, 50: 1.20, 60: 1.12, 70: 1.04, 80: 1.14, 90: 0.77 } },
+            forearm:  { mof: { 40: 2.57, 50: 1.33, 60: 1.23, 70: 1.22, 80: 1.20, 90: 0.73 }, hf: { 40: 2.55, 50: 2.27, 60: 2.23, 70: 1.86, 80: 1.54, 90: 1.09 } }
         }
     };
     const meanHalValues = { male: 121.3, female: 104.7 };
@@ -439,12 +438,6 @@ document.addEventListener('DOMContentLoaded', function () {
     }, { passive: true });
     
     // --- CORE CALCULATION LOGIC ---
-    
-    // UPDATED: Custom rounding function for "round half away from zero"
-    function roundAwayFromZero(num) {
-        return Math.sign(num) * Math.round(Math.abs(num));
-    }
-
     function runFullCalculation() {
         if (window.innerWidth < 1024) { 
             resultsColumn.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -474,7 +467,7 @@ document.addEventListener('DOMContentLoaded', function () {
         
         let mof_multiplier=1, hf_multiplier=1;
         let potential_uplifts=[];
-
+        
         // 1. Recent Sentinel Fracture
         if (has_recent_fracture) {
             const age_map_mof = kanisMultipliers[sex][recent_fracture_site].mof;
@@ -496,11 +489,10 @@ document.addEventListener('DOMContentLoaded', function () {
         
         // 4. BMD Discordance
         if (!isNaN(ls_tscore) && !isNaN(fn_tscore)) {
-            // UPDATED: Using custom rounding function
-            const t_score_diff = roundAwayFromZero(ls_tscore) - roundAwayFromZero(fn_tscore);
+            const t_score_diff = Math.round(ls_tscore) - Math.round(fn_tscore);
             if (t_score_diff !== 0) {
                 const bmd_multiplier = 1.0 - (t_score_diff * 0.10);
-                potential_uplifts.push({reason: `Discordant BMD (T-score diff: ${t_score_diff})`, mof: bmd_multiplier, hf: "N/A"});
+                potential_uplifts.push({reason: `Discordant BMD (T-score diff: ${t_score_diff})`, mof: bmd_multiplier, hf: 1});
             }
         }
         
@@ -509,13 +501,13 @@ document.addEventListener('DOMContentLoaded', function () {
             const diff_mm = hal_mm - meanHalValues[sex];
             let hal_adj_percent = (diff_mm > 0) ? (diff_mm * 4.7) : (diff_mm * 3.8);
             const hal_multiplier = 1 + (hal_adj_percent / 100);
-            potential_uplifts.push({reason: `Hip Axis Length (${diff_mm.toFixed(1)}mm from mean)`, mof: "N/A", hf: hal_multiplier});
+            potential_uplifts.push({reason: `Hip Axis Length (${diff_mm.toFixed(1)}mm from mean)`, mof: 1, hf: hal_multiplier});
         }
 
         // Apply the dominant (largest) multiplier for MOF and HF separately.
         if (potential_uplifts.length > 0) {
-            mof_multiplier = Math.max(...potential_uplifts.map(u => (typeof u.mof === 'number' ? u.mof : 1)), 1);
-            hf_multiplier = Math.max(...potential_uplifts.map(u => (typeof u.hf === 'number' ? u.hf : 1)), 1);
+            mof_multiplier = Math.max(...potential_uplifts.map(u => u.mof), 1);
+            hf_multiplier = Math.max(...potential_uplifts.map(u => u.hf), 1);
         }
         
         const adjusted_mof = initial_mof * mof_multiplier;
@@ -557,10 +549,10 @@ document.addEventListener('DOMContentLoaded', function () {
     
     // --- DISPLAY & UI UPDATE FUNCTIONS ---
     function displayUpliftResults(data) {
-        document.getElementById('result_initial_mof').textContent = `${data.initial_mof.toFixed(1)}%`;
-        document.getElementById('result_initial_hf').textContent = `${data.initial_hf.toFixed(1)}%`;
-        document.getElementById('result_adjusted_mof').textContent = `${data.adjusted_mof.toFixed(1)}%`;
-        document.getElementById('result_adjusted_hf').textContent = `${data.adjusted_hf.toFixed(1)}%`;
+        document.getElementById('result_initial_mof').textContent = `${data.initial_mof.toFixed(2)}%`;
+        document.getElementById('result_initial_hf').textContent = `${data.initial_hf.toFixed(2)}%`;
+        document.getElementById('result_adjusted_mof').textContent = `${data.adjusted_mof.toFixed(2)}%`;
+        document.getElementById('result_adjusted_hf').textContent = `${data.adjusted_hf.toFixed(2)}%`;
 
         const adjReasonContainer = document.getElementById('adjustment_reason_container');
         const upliftBreakdownCard = document.getElementById('uplift_breakdown_card');
@@ -577,13 +569,13 @@ document.addEventListener('DOMContentLoaded', function () {
             const header = `<div class="grid grid-cols-3 font-semibold text-gray-600 border-b pb-1"><div>Factor</div><div class="text-center">MOF Multiplier</div><div class="text-center">HF Multiplier</div></div>`;
             upliftBreakdownContainer.insertAdjacentHTML('beforeend', header);
             data.potential_uplifts.forEach(uplift => {
-                const isDominantMOF = typeof uplift.mof === 'number' && uplift.mof.toFixed(4) === data.dominant_mof_multiplier.toFixed(4) && uplift.mof !== 1;
-                const isDominantHF = typeof uplift.hf === 'number' && uplift.hf.toFixed(4) === data.dominant_hf_multiplier.toFixed(4) && uplift.hf !== 1;
+                const isDominantMOF = uplift.mof.toFixed(4) === data.dominant_mof_multiplier.toFixed(4) && uplift.mof !== 1;
+                const isDominantHF = uplift.hf.toFixed(4) === data.dominant_hf_multiplier.toFixed(4) && uplift.hf !== 1;
                 const mofClass = isDominantMOF ? 'font-bold text-blue-600' : '';
                 const hfClass = isDominantHF ? 'font-bold text-blue-600' : '';
                 
-                const mofText = typeof uplift.mof === 'number' ? `x${uplift.mof.toFixed(2)}` : 'N/A';
-                const hfText = typeof uplift.hf === 'number' ? `x${uplift.hf.toFixed(2)}` : 'N/A';
+                const mofText = `x${uplift.mof.toFixed(2)}`;
+                const hfText = `x${uplift.hf.toFixed(2)}`;
 
                 const row = `<div class="grid grid-cols-3 items-center border-b border-gray-200 py-2 last:border-b-0"><div>${uplift.reason}</div><div class="text-center ${mofClass}">${mofText} ${isDominantMOF?'<span class="text-xs text-blue-500">(Applied)</span>':''}</div><div class="text-center ${hfClass}">${hfText} ${isDominantHF?'<span class="text-xs text-blue-500">(Applied)</span>':''}</div></div>`;
                 upliftBreakdownContainer.insertAdjacentHTML('beforeend', row);
@@ -790,3 +782,5 @@ document.addEventListener('DOMContentLoaded', function () {
 
 </body>
 </html>
+
+
