@@ -193,7 +193,16 @@
                                      <input type="number" id="fn_tscore" class="form-input" step="0.1" placeholder="e.g., -2.5">
                                  </div>
                              </div>
-                             <p class="text-xs text-gray-500 mt-2"><strong>Caveat:</strong> A downward adjustment for a high LS T-score should only be made if the measurement is reliable and not due to artifacts (e.g., degenerative changes).</p>
+                             <p class="text-xs text-gray-500 mt-2"><strong>Caveat:</strong> Discordance-based uplift should only be applied if the LS and FN measurements are reliable and not affected by artifacts (e.g., degenerative spinal changes).</p>
+                             <div class="mt-4">
+                                 <label for="discordance_method" class="form-label">LS/FN Discordance Method</label>
+                                 <select id="discordance_method" class="form-select">
+                                     <option value="leslie" selected>Leslie 2011</option>
+                                     <option value="johansson">Johansson 2014 (Strict Tiers)</option>
+                                     <option value="nogg_continuous">NOGG Continuous</option>
+                                 </select>
+                                 <p class="text-xs text-gray-500 mt-2">Applies only when Femoral Neck T-score exceeds Lumbar Spine T-score by at least 1.0 SD.</p>
+                             </div>
                          </div>
                          <div>
                             <label for="hal_mm" class="form-label">Hip Axis Length (HAL) in mm</label>
@@ -327,6 +336,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
     const recentFractureToggle = document.querySelectorAll('input[name="recent_fracture_toggle"]');
     const recentFractureDetails = document.getElementById('recent_fracture_details');
+    const discordanceMethodSelect = document.getElementById('discordance_method');
+    const lsTscoreInput = document.getElementById('ls_tscore');
+    const fnTscoreInput = document.getElementById('fn_tscore');
     const noggFactorsCard = document.getElementById('nogg_factors_card');
     const upliftBreakdownContainer = document.getElementById('uplift_breakdown');
     const upliftBreakdownCard = document.getElementById('uplift_breakdown_card');
@@ -398,7 +410,10 @@ document.addEventListener('DOMContentLoaded', function () {
         recentFractureDetails.classList.toggle('hidden', !showDetails);
     }));
 
-    calculateBtn.addEventListener('click', runFullCalculation);
+    calculateBtn.addEventListener('click', () => runFullCalculation());
+    discordanceMethodSelect.addEventListener('change', rerunCalculationInPlace);
+    lsTscoreInput.addEventListener('input', rerunCalculationInPlace);
+    fnTscoreInput.addEventListener('input', rerunCalculationInPlace);
     
     resetBtn.addEventListener('click', () => {
         calculatorForm.reset();
@@ -436,13 +451,69 @@ document.addEventListener('DOMContentLoaded', function () {
         scrollArrowDown.classList.toggle('hidden', isAtBottom);
 
     }, { passive: true });
+
+    function formatDiscordanceValue(value) {
+        return value.toFixed(2).replace(/\.?0+$/, '');
+    }
+
+    function getDiscordanceMethodConfig(method) {
+        switch (method) {
+            case 'johansson':
+                return {
+                    label: 'Johansson 2014',
+                    adjustment: difference => Math.floor(difference) * 0.10
+                };
+            case 'nogg_continuous':
+                return {
+                    label: 'NOGG Continuous',
+                    adjustment: difference => difference * 0.10
+                };
+            case 'leslie':
+            default:
+                return {
+                    label: 'Leslie 2011',
+                    adjustment: difference => Math.round(difference) * 0.10
+                };
+        }
+    }
+
+    function calculateDiscordanceAdjustment(lsTscore, fnTscore, method) {
+        if (isNaN(lsTscore) || isNaN(fnTscore)) return null;
+
+        const difference = fnTscore - lsTscore;
+        if (difference < 1.0) return null;
+
+        const methodConfig = getDiscordanceMethodConfig(method);
+        const adjustmentPercentage = methodConfig.adjustment(difference);
+        if (adjustmentPercentage <= 0) return null;
+
+        return {
+            methodLabel: methodConfig.label,
+            differenceDisplay: formatDiscordanceValue(difference),
+            adjustmentDisplay: formatDiscordanceValue(adjustmentPercentage * 100),
+            multiplier: 1 + adjustmentPercentage
+        };
+    }
+
+    function rerunCalculationInPlace() {
+        if (allResultsContainer.classList.contains('hidden')) return;
+        runFullCalculation({ scrollToResults: false, showValidationErrors: false });
+    }
     
     // --- CORE CALCULATION LOGIC ---
-    function runFullCalculation() {
-        if (window.innerWidth < 1024) { 
-            resultsColumn.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        } else {
-            window.scrollTo({ top: 0, behavior: 'smooth' });
+    function runFullCalculation(options = {}) {
+        const { scrollToResults = true, showValidationErrors = true } = options;
+        const failValidation = (message) => {
+            if (showValidationErrors) showModal(message);
+            return false;
+        };
+
+        if (scrollToResults) {
+            if (window.innerWidth < 1024) { 
+                resultsColumn.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            } else {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
         }
 
         const sex = document.getElementById('sex').value;
@@ -455,14 +526,15 @@ document.addEventListener('DOMContentLoaded', function () {
         const has_recurrent_falls = document.querySelector('input[name="falls_option"]:checked').value === 'yes';
         const ls_tscore = parseFloat(document.getElementById('ls_tscore').value);
         const fn_tscore = parseFloat(document.getElementById('fn_tscore').value);
+        const discordance_method = discordanceMethodSelect.value;
         const hal_mm = parseFloat(document.getElementById('hal_mm').value);
 
-        if (isNaN(age) || isNaN(initial_mof) || isNaN(initial_hf)) { showModal("Please fill in Age, Initial MOF, and Initial HF fields."); return; }
-        if (age < 40 || age > 90) { showModal("Please enter an age between 40 and 90."); return; }
-        if (initial_mof < 0 || initial_mof > 100 || initial_hf < 0 || initial_hf > 100) { showModal("Initial probabilities must be between 0 and 100."); return; }
+        if (isNaN(age) || isNaN(initial_mof) || isNaN(initial_hf)) return failValidation("Please fill in Age, Initial MOF, and Initial HF fields.");
+        if (age < 40 || age > 90) return failValidation("Please enter an age between 40 and 90.");
+        if (initial_mof < 0 || initial_mof > 100 || initial_hf < 0 || initial_hf > 100) return failValidation("Initial probabilities must be between 0 and 100.");
         if (!isNaN(hal_mm)) {
             const range = halValidationRanges[sex];
-            if (hal_mm < range.min || hal_mm > range.max) { showModal(`Hip Axis Length for a ${sex} must be between ${range.min} and ${range.max} mm.`); return; }
+            if (hal_mm < range.min || hal_mm > range.max) return failValidation(`Hip Axis Length for a ${sex} must be between ${range.min} and ${range.max} mm.`);
         }
         
         let mof_multiplier=1, hf_multiplier=1;
@@ -488,12 +560,13 @@ document.addEventListener('DOMContentLoaded', function () {
         if (has_recurrent_falls) potential_uplifts.push({reason: 'Recurrent falls (≥2)', mof: 1.30, hf: 1.30});
         
         // 4. BMD Discordance
-        if (!isNaN(ls_tscore) && !isNaN(fn_tscore)) {
-            const t_score_diff = Math.round(ls_tscore) - Math.round(fn_tscore);
-            if (t_score_diff !== 0) {
-                const bmd_multiplier = 1.0 - (t_score_diff * 0.10);
-                potential_uplifts.push({reason: `Discordant BMD (T-score diff: ${t_score_diff})`, mof: bmd_multiplier, hf: 1});
-            }
+        const discordanceAdjustment = calculateDiscordanceAdjustment(ls_tscore, fn_tscore, discordance_method);
+        if (discordanceAdjustment) {
+            potential_uplifts.push({
+                reason: `Discordant BMD (${discordanceAdjustment.methodLabel}; FN-LS ${discordanceAdjustment.differenceDisplay} SD; +${discordanceAdjustment.adjustmentDisplay}%)`,
+                mof: discordanceAdjustment.multiplier,
+                hf: 1
+            });
         }
         
         // 5. Hip Axis Length (HAL)
@@ -529,10 +602,12 @@ document.addEventListener('DOMContentLoaded', function () {
 
             if (window.innerWidth < 1024) {
                 const isAtBottom = window.scrollY + window.innerHeight >= document.body.offsetHeight - 150;
-                 scrollArrowDown.classList.toggle('hidden', isAtBottom);
-                 scrollArrowUp.classList.toggle('hidden', !isAtBottom);
+                scrollArrowDown.classList.toggle('hidden', isAtBottom);
+                scrollArrowUp.classList.toggle('hidden', !isAtBottom);
             }
         }, 0);
+
+        return true;
     }
 
     function getMultiplierForAge(age_map, age) {
